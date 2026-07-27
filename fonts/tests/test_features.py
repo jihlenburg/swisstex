@@ -70,19 +70,30 @@ def test_urw_kern_preserved_exactly(tmp_path):
     value and the total pair count directly from the pristine source at
     test time (not hardcoded), so this proves *preservation* rather than
     pinning a constant that would silently go stale if the source ever
-    changed."""
+    changed.
+
+    Also covers the GDEF sibling of the GPOS delete-on-empty hazard (fix
+    round 2): GDEF must still be present in the built font whenever the
+    source had one -- feaLib's Builder.build() drops GDEF the same way it
+    drops GPOS/GSUB when the fea's computed table for that tag is empty
+    (fontTools/feaLib/builder.py:233-238), and a liga-only fea defines no
+    GDEF-relevant data."""
     src = TTFont(config.SOURCE_FILES[0])  # u001-reg.ttf, read-only load
     expected_av = _kern_value(src, "A", "V")
     expected_count = _kern_pair_count(src)
+    src_has_gdef = "GDEF" in src
     # sanity: the source really does carry non-trivial kern data (it does
-    # -- 92 pairs incl. A-V = -138 as of this source revision)
+    # -- 92 distinct first-glyph pair sets, ~970-990 pair records total,
+    # incl. A-V = -138 as of this source revision -- and a GDEF table)
     assert expected_av is not None
     assert expected_count > 0
+    assert src_has_gdef
 
     build.run(["rename", "metrics", "italic", "coverage", "features"], str(tmp_path))
     f = TTFont(str(next(tmp_path.glob("*Grotesk-Regular.ttf"))))
     assert _kern_value(f, "A", "V") == expected_av
     assert _kern_pair_count(f) == expected_count
+    assert ("GDEF" in f) == src_has_gdef
 
 
 def test_liga_present_when_fi_fl_exist(tmp_path):
@@ -98,14 +109,15 @@ def test_liga_present_when_fi_fl_exist(tmp_path):
 
 def test_features_step_noop_when_fi_fl_missing():
     """Negative branch (reviewer-requested): a font without fi/fl must go
-    through step_features completely unharmed -- no liga added, and GPOS
-    and GSUB left byte-identical. This guards the delete-on-empty hazard
-    in fontTools.feaLib.builder.Builder.build(): compiling a fea whose
-    computed table for a tag is empty deletes any existing table under
-    that tag, so a naive implementation that still called feaLib on the
-    false branch (with an empty/no-liga fea) could silently drop an
-    existing GSUB (or GPOS). step_features avoids this by returning
-    before any feaLib call when fi/fl are missing.
+    through step_features completely unharmed -- no liga added, and GPOS,
+    GDEF, and GSUB left byte-identical. This guards the delete-on-empty
+    hazard in fontTools.feaLib.builder.Builder.build(): compiling a fea
+    whose computed table for a tag is empty deletes any existing table
+    under that tag (GPOS/GSUB at builder.py:217-231, GDEF identically at
+    builder.py:233-238), so a naive implementation that still called
+    feaLib on the false branch (with an empty/no-liga fea) could silently
+    drop an existing GSUB, GPOS, or GDEF. step_features avoids this by
+    returning before any feaLib call when fi/fl are missing.
 
     Uses an in-memory copy of a pristine source with fi/fl stripped from
     the glyph order; the source file on disk is only ever opened for
@@ -116,6 +128,7 @@ def test_features_step_noop_when_fi_fl_missing():
     assert not ({"fi", "fl"} <= set(font.getGlyphOrder()))
 
     gpos_before = font["GPOS"].compile(font) if "GPOS" in font else None
+    gdef_before = font["GDEF"].compile(font) if "GDEF" in font else None
     gsub_before = font["GSUB"].compile(font) if "GSUB" in font else None
 
     build.step_features(font, "u001-reg")
@@ -123,6 +136,10 @@ def test_features_step_noop_when_fi_fl_missing():
     assert ("GPOS" in font) == (gpos_before is not None)
     if gpos_before is not None:
         assert font["GPOS"].compile(font) == gpos_before
+
+    assert ("GDEF" in font) == (gdef_before is not None)
+    if gdef_before is not None:
+        assert font["GDEF"].compile(font) == gdef_before
 
     assert ("GSUB" in font) == (gsub_before is not None)
     if gsub_before is not None:

@@ -92,26 +92,35 @@ def step_features(font, filename):
     each tag, either installs the computed table or -- if the computed
     table is empty (ScriptCount == FeatureCount == LookupCount == 0) AND
     the font already has a table under that tag -- deletes it outright
-    (see fontTools/feaLib/builder.py:217-231). A liga-only fea has no GPOS
-    statements at all, so its computed GPOS is empty; compiling it against
-    a font that already has GPOS (every u001 source does) would silently
-    delete that GPOS/kern table as an unwanted side effect. Guarded two
-    ways:
-      - fi/fl missing: return before any feaLib call -- nothing (GPOS or
-        GSUB) can be touched, so the empty-GSUB variant of the same hazard
-        can't trigger either.
-      - fi/fl present: snapshot font["GPOS"] before the call and restore
-        it after. GSUB is exactly what should be (re)built here (non-empty,
-        contains liga), so it's left alone.
+    (see fontTools/feaLib/builder.py:217-231). GDEF gets the identical
+    treatment a few lines later (builder.py:233-238): buildGDEF() returns
+    falsy when the fea defines no glyph classes/anchors/ligature carets,
+    and if the font already has a GDEF, it's deleted. A liga-only fea has
+    no GPOS statements and defines no GDEF-relevant data, so both its
+    computed GPOS and its computed GDEF are empty; compiling it against a
+    font that already has GPOS and/or GDEF (every u001 source has both)
+    would silently delete them as an unwanted side effect. Confirmed
+    empirically (isolated repro): compiling the liga-only fea against
+    u001-reg.ttf with no guard leaves both 'GPOS' in font and
+    'GDEF' in font False afterward. Guarded two ways:
+      - fi/fl missing: return before any feaLib call -- nothing (GPOS,
+        GDEF, or GSUB) can be touched, so the empty-GSUB variant of the
+        same hazard can't trigger either.
+      - fi/fl present: snapshot font["GPOS"] and font["GDEF"] before the
+        call and restore both after. GSUB is exactly what should be
+        (re)built here (non-empty, contains liga), so it's left alone.
     """
     glyphs = set(font.getGlyphOrder())
     if not ({"fi", "fl"} <= glyphs):
         return
     fea = "feature liga { sub f i by fi; sub f l by fl; } liga;\n"
     gpos = font.get("GPOS")
+    gdef = font.get("GDEF")
     addOpenTypeFeaturesFromString(font, fea)
     if gpos is not None:
         font["GPOS"] = gpos
+    if gdef is not None:
+        font["GDEF"] = gdef
 
 STEPS = {"rename": step_rename, "metrics": step_metrics, "italic": step_italic,
          "coverage": step_coverage, "features": step_features}
