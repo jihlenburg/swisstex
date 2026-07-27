@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, math
 sys.path.insert(0, os.path.dirname(__file__))
 from fontTools.ttLib import TTFont
 import config
@@ -38,8 +38,16 @@ def step_metrics(font, filename):
     hhea.descent = t["typo_desc"]
     hhea.lineGap = t["line_gap"]
 
-STEPS = {"rename": step_rename, "metrics": step_metrics}
-ORDER = ["rename", "metrics"]          # later tasks append: italic, coverage, features
+def step_italic(font, filename):
+    if filename not in config.ITALIC_FILES:
+        return
+    font["post"].italicAngle = config.ITALIC_ANGLE
+    hhea = font["hhea"]
+    hhea.caretSlopeRise = 1000
+    hhea.caretSlopeRun = round(math.tan(math.radians(-config.ITALIC_ANGLE)) * 1000)
+
+STEPS = {"rename": step_rename, "metrics": step_metrics, "italic": step_italic}
+ORDER = ["rename", "metrics", "italic"]          # later tasks append: coverage, features
 
 def run(steps, out_dir):
     os.makedirs(out_dir, exist_ok=True)

@@ -20,6 +20,9 @@ LICENSE_NOTE = ("Modified version of URW U001, renamed per the Aladdin Free "
                 "commercial distribution as a font.")
 VERSION = "Version 2.000"
 
+ITALIC_ANGLE = -17.0
+ITALIC_FILES = {"u001-ita", "u001-bolita", "u001con-ita", "u001con-bolita"}
+
 _metrics_cache = None
 def metrics_targets():
     """typo = Regular's source values (canonical rhythm); win = union of
