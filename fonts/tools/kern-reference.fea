@@ -1,5 +1,14 @@
-# fonts/tools/kern.fea — curated pairs, values in 2048-upm units,
-# scale ~= -0.55 x Regular stem (92) for the tightest cap pairs.
+# fonts/tools/kern-reference.fea — NOT COMPILED.
+#
+# User ruling (2026-07-27): SwissTeX Grotesk ships the u001 sources' own
+# URW-authored GPOS kerning as-is (build.step_features applies liga only).
+# This file is retained purely as documentation of the display-pair
+# analysis behind the curated values below -- it is never read or
+# compiled by fonts/tools/build.py. If a future decision reinstates a
+# curated kern feature, this is the starting point.
+#
+# curated pairs, values in 2048-upm units, scale ~= -0.55 x Regular stem
+# (92) for the tightest cap pairs.
 feature kern {
     pos A V -70;  pos V A -70;  pos A W -55;  pos W A -55;
     pos A Y -80;  pos Y A -80;  pos A T -75;  pos T A -75;

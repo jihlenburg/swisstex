@@ -30,10 +30,12 @@ REQUIRED_CODEPOINTS = {
     0x2026: "ellipsis", 0x2030: "perthousand",
 }
 
-# kern.fea pair values are hand-authored in font design units at this
-# unitsPerEm; all 8 u001 sources share unitsPerEm == KERN_UNIT (verified
-# in Task 6), so the same fea applies verbatim across the family without
-# rescaling.
+# kern-reference.fea's pair values are authored in font design units at
+# this unitsPerEm (all 8 u001 sources share unitsPerEm == KERN_UNIT,
+# verified in Task 6). Not currently load-bearing: kern-reference.fea is
+# reference-only and is not compiled (user ruling 2026-07-27 -- SwissTeX
+# Grotesk ships the sources' own URW GPOS kerning). Kept for the day a
+# curated kern feature is reinstated.
 KERN_UNIT = 2048
 
 _metrics_cache = None

@@ -73,6 +73,10 @@ interpolating within U001's own cuts (no license mixing).
 
 **Math font:** TeX Gyre DejaVu Math, unchanged.
 
+**2026-07-27 decisions from implementation:** coverage audit found zero missing codepoints (incl.
+Euro) — RECIPES empty; sources ship URW-authored GPOS kern (92–988 pairs/style) — preserved by
+user ruling; curated kern.fea retired to reference.
+
 ## 4. Class extension points (`swisstex.cls`)
 
 1. **`identity=<name>` class option** loads `swissidentity-<name>.sty` after option processing,

@@ -80,19 +80,38 @@ def step_coverage(font, filename):
 RECIPES = {}
 
 def step_features(font, filename):
-    """Compile the hand-curated kern.fea into GPOS, replacing whatever
-    GPOS/kern the source shipped with (addOpenTypeFeaturesFromString builds
-    the table fresh from the fea string, so any inherited third-party
-    kerning data -- license firewall -- does not survive this step).
+    """liga only. User ruling (2026-07-27): SwissTeX Grotesk ships the u001
+    sources' own URW-authored GPOS kerning as-is, not the curated
+    kern-reference.fea (retired to documentation; see that file's header).
     liga (fi/fl) is added only when both ligature glyphs exist in this
-    font's glyph order, per style, per the brief's conditional.
+    font's glyph order; when they don't, this is a true no-op -- return
+    before calling feaLib at all.
+
+    Hazard (delete-on-empty): fontTools.feaLib.builder.Builder.build()
+    computes a fresh GPOS and a fresh GSUB from the fea source and, for
+    each tag, either installs the computed table or -- if the computed
+    table is empty (ScriptCount == FeatureCount == LookupCount == 0) AND
+    the font already has a table under that tag -- deletes it outright
+    (see fontTools/feaLib/builder.py:217-231). A liga-only fea has no GPOS
+    statements at all, so its computed GPOS is empty; compiling it against
+    a font that already has GPOS (every u001 source does) would silently
+    delete that GPOS/kern table as an unwanted side effect. Guarded two
+    ways:
+      - fi/fl missing: return before any feaLib call -- nothing (GPOS or
+        GSUB) can be touched, so the empty-GSUB variant of the same hazard
+        can't trigger either.
+      - fi/fl present: snapshot font["GPOS"] before the call and restore
+        it after. GSUB is exactly what should be (re)built here (non-empty,
+        contains liga), so it's left alone.
     """
-    fea_path = os.path.join(os.path.dirname(__file__), "kern.fea")
-    fea = open(fea_path).read()
     glyphs = set(font.getGlyphOrder())
-    if {"fi", "fl"} <= glyphs:
-        fea += "\nfeature liga { sub f i by fi; sub f l by fl; } liga;\n"
+    if not ({"fi", "fl"} <= glyphs):
+        return
+    fea = "feature liga { sub f i by fi; sub f l by fl; } liga;\n"
+    gpos = font.get("GPOS")
     addOpenTypeFeaturesFromString(font, fea)
+    if gpos is not None:
+        font["GPOS"] = gpos
 
 STEPS = {"rename": step_rename, "metrics": step_metrics, "italic": step_italic,
          "coverage": step_coverage, "features": step_features}

@@ -1,9 +1,14 @@
 import sys
 sys.path.insert(0, "fonts/tools")
 from fontTools.ttLib import TTFont
-import build
+import build, config
 
 def test_kern_feature_compiled(tmp_path):
+    # "compiled" in the sense of "present in the output" -- under the
+    # 2026-07-27 user ruling this is the u001 source's own URW-authored
+    # GPOS/kern, preserved untouched by step_features (liga only; see
+    # build.step_features's docstring for the delete-on-empty hazard this
+    # step must not trigger against GPOS).
     build.run(["rename", "metrics", "italic", "coverage", "features"], str(tmp_path))
     for p in tmp_path.glob("*.ttf"):
         f = TTFont(str(p))
@@ -23,8 +28,8 @@ def test_av_pair_negative(tmp_path):
 def _kern_value(font, left, right):
     """Look up the XAdvance for a specific (left, right) kern pair across
     all lookups referenced by the 'kern' feature. Handles PairPos Format 1
-    (explicit PairSet) which is what feaLib emits for the individual
-    `pos A B -n;` statements in kern.fea."""
+    (explicit PairSet), which is what both feaLib and the u001 sources'
+    own URW-authored kerning use."""
     gpos = font["GPOS"].table
     kern_lookup_indices = set()
     for fr in gpos.FeatureList.FeatureRecord:
@@ -43,18 +48,6 @@ def _kern_value(font, left, right):
     return None
 
 
-def test_av_pair_is_hand_curated_value_not_inherited(tmp_path):
-    """kern.fea specifies A V -70 (2048upm). The u001 sources ship their
-    own GPOS/kern (URW-authored, A-V = -138) which step_features must
-    fully replace -- not merge with -- per the license-firewall
-    constraint (no kerning data from any other font). This is the
-    concrete RED->GREEN check: -138 (inherited, pre-step) vs -70
-    (hand-curated, post-step)."""
-    build.run(["rename", "metrics", "italic", "coverage", "features"], str(tmp_path))
-    f = TTFont(str(next(tmp_path.glob("*Grotesk-Regular.ttf"))))
-    assert _kern_value(f, "A", "V") == -70
-
-
 def _kern_pair_count(font):
     gpos = font["GPOS"].table
     kern_lookup_indices = set()
@@ -70,15 +63,26 @@ def _kern_pair_count(font):
     return total
 
 
-def test_kern_pair_count_matches_curated_fea_exactly(tmp_path):
-    """License firewall: kern.fea defines exactly 38 pairs. The u001
-    sources ship their own 92-pair GPOS/kern (URW-authored, not part of
-    the brief). If step_features ever started merging instead of
-    replacing, this count would exceed 38 and this test would catch it."""
+def test_urw_kern_preserved_exactly(tmp_path):
+    """User ruling (2026-07-27): SwissTeX Grotesk ships the u001 source's
+    own GPOS kerning untouched -- step_features (liga only) must not
+    replace, merge into, or otherwise alter it. Read both the A-V pair
+    value and the total pair count directly from the pristine source at
+    test time (not hardcoded), so this proves *preservation* rather than
+    pinning a constant that would silently go stale if the source ever
+    changed."""
+    src = TTFont(config.SOURCE_FILES[0])  # u001-reg.ttf, read-only load
+    expected_av = _kern_value(src, "A", "V")
+    expected_count = _kern_pair_count(src)
+    # sanity: the source really does carry non-trivial kern data (it does
+    # -- 92 pairs incl. A-V = -138 as of this source revision)
+    assert expected_av is not None
+    assert expected_count > 0
+
     build.run(["rename", "metrics", "italic", "coverage", "features"], str(tmp_path))
-    for p in tmp_path.glob("*.ttf"):
-        f = TTFont(str(p))
-        assert _kern_pair_count(f) == 38, p.name
+    f = TTFont(str(next(tmp_path.glob("*Grotesk-Regular.ttf"))))
+    assert _kern_value(f, "A", "V") == expected_av
+    assert _kern_pair_count(f) == expected_count
 
 
 def test_liga_present_when_fi_fl_exist(tmp_path):
@@ -90,3 +94,42 @@ def test_liga_present_when_fi_fl_exist(tmp_path):
             assert "GSUB" in f, p.name
             feats = [fr.FeatureTag for fr in f["GSUB"].table.FeatureList.FeatureRecord]
             assert "liga" in feats, p.name
+
+
+def test_features_step_noop_when_fi_fl_missing():
+    """Negative branch (reviewer-requested): a font without fi/fl must go
+    through step_features completely unharmed -- no liga added, and GPOS
+    and GSUB left byte-identical. This guards the delete-on-empty hazard
+    in fontTools.feaLib.builder.Builder.build(): compiling a fea whose
+    computed table for a tag is empty deletes any existing table under
+    that tag, so a naive implementation that still called feaLib on the
+    false branch (with an empty/no-liga fea) could silently drop an
+    existing GSUB (or GPOS). step_features avoids this by returning
+    before any feaLib call when fi/fl are missing.
+
+    Uses an in-memory copy of a pristine source with fi/fl stripped from
+    the glyph order; the source file on disk is only ever opened for
+    reading here, so it stays pristine."""
+    font = TTFont(config.SOURCE_FILES[0])  # independent in-memory copy
+    order = [g for g in font.getGlyphOrder() if g not in ("fi", "fl")]
+    font.setGlyphOrder(order)
+    assert not ({"fi", "fl"} <= set(font.getGlyphOrder()))
+
+    gpos_before = font["GPOS"].compile(font) if "GPOS" in font else None
+    gsub_before = font["GSUB"].compile(font) if "GSUB" in font else None
+
+    build.step_features(font, "u001-reg")
+
+    assert ("GPOS" in font) == (gpos_before is not None)
+    if gpos_before is not None:
+        assert font["GPOS"].compile(font) == gpos_before
+
+    assert ("GSUB" in font) == (gsub_before is not None)
+    if gsub_before is not None:
+        assert font["GSUB"].compile(font) == gsub_before
+        feats = [fr.FeatureTag for fr in font["GSUB"].table.FeatureList.FeatureRecord]
+        assert "liga" not in feats
+
+    # source file on disk must remain pristine (never written to)
+    disk = TTFont(config.SOURCE_FILES[0])
+    assert {"fi", "fl"} <= set(disk.getGlyphOrder())
