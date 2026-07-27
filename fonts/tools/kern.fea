@@ -1,0 +1,15 @@
+# fonts/tools/kern.fea — curated pairs, values in 2048-upm units,
+# scale ~= -0.55 x Regular stem (92) for the tightest cap pairs.
+feature kern {
+    pos A V -70;  pos V A -70;  pos A W -55;  pos W A -55;
+    pos A Y -80;  pos Y A -80;  pos A T -75;  pos T A -75;
+    pos F A -55;  pos P A -60;  pos L T -70;  pos L V -70;
+    pos L Y -75;  pos T a -65;  pos T e -65;  pos T o -65;
+    pos V a -50;  pos V e -50;  pos V o -50;  pos W a -40;
+    pos W e -40;  pos W o -40;  pos Y a -70;  pos Y e -70;
+    pos Y o -70;  pos r comma -60;  pos r period -60;
+    pos v comma -50;  pos v period -50;  pos w comma -45;
+    pos w period -45;  pos y comma -50;  pos y period -50;
+    pos quoteright s -25;  pos f quoteright 30;
+    pos one period -20;  pos seven period -55;  pos period seven -40;
+} kern;

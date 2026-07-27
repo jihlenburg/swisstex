@@ -1,6 +1,7 @@
 import os, sys, math
 sys.path.insert(0, os.path.dirname(__file__))
 from fontTools.ttLib import TTFont
+from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
 import config
 
 def load(path):
@@ -78,9 +79,24 @@ def step_coverage(font, filename):
 
 RECIPES = {}
 
+def step_features(font, filename):
+    """Compile the hand-curated kern.fea into GPOS, replacing whatever
+    GPOS/kern the source shipped with (addOpenTypeFeaturesFromString builds
+    the table fresh from the fea string, so any inherited third-party
+    kerning data -- license firewall -- does not survive this step).
+    liga (fi/fl) is added only when both ligature glyphs exist in this
+    font's glyph order, per style, per the brief's conditional.
+    """
+    fea_path = os.path.join(os.path.dirname(__file__), "kern.fea")
+    fea = open(fea_path).read()
+    glyphs = set(font.getGlyphOrder())
+    if {"fi", "fl"} <= glyphs:
+        fea += "\nfeature liga { sub f i by fi; sub f l by fl; } liga;\n"
+    addOpenTypeFeaturesFromString(font, fea)
+
 STEPS = {"rename": step_rename, "metrics": step_metrics, "italic": step_italic,
-         "coverage": step_coverage}
-ORDER = ["rename", "metrics", "italic", "coverage"]   # later tasks append: features
+         "coverage": step_coverage, "features": step_features}
+ORDER = ["rename", "metrics", "italic", "coverage", "features"]
 
 def run(steps, out_dir):
     os.makedirs(out_dir, exist_ok=True)

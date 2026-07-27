@@ -30,6 +30,12 @@ REQUIRED_CODEPOINTS = {
     0x2026: "ellipsis", 0x2030: "perthousand",
 }
 
+# kern.fea pair values are hand-authored in font design units at this
+# unitsPerEm; all 8 u001 sources share unitsPerEm == KERN_UNIT (verified
+# in Task 6), so the same fea applies verbatim across the family without
+# rescaling.
+KERN_UNIT = 2048
+
 _metrics_cache = None
 def metrics_targets():
     """typo = Regular's source values (canonical rhythm); win = union of
