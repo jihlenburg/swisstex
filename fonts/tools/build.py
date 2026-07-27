@@ -46,8 +46,41 @@ def step_italic(font, filename):
     hhea.caretSlopeRise = 1000
     hhea.caretSlopeRun = round(math.tan(math.radians(-config.ITALIC_ANGLE)) * 1000)
 
-STEPS = {"rename": step_rename, "metrics": step_metrics, "italic": step_italic}
-ORDER = ["rename", "metrics", "italic"]          # later tasks append: coverage, features
+def step_coverage(font, filename):
+    """Verify config.REQUIRED_CODEPOINTS are covered; compose any genuine
+    gap from the font's own parts via RECIPES (rule-based composites, no
+    external outlines). Audit of the 8 u001 sources (2026-07-27) found
+    every Unicode cmap subtable -- (0,3) and (3,1), format 4 -- already
+    carries all 11 required codepoints, euro included; the (1,0) Mac Roman
+    subtable "misses" them only because that single-byte encoding cannot
+    represent them at all, which getBestCmap() correctly ignores. So
+    RECIPES is empty for now: nothing to compose. The mechanism stays in
+    place (recipe lookup + hard ValueError on an uncomposable gap) so a
+    future source update that actually drops a glyph fails loudly instead
+    of silently shipping a hole.
+    """
+    cmap_table = font["cmap"]
+    cmap = font.getBestCmap()
+    for cp, gname in config.REQUIRED_CODEPOINTS.items():
+        if cp in cmap:
+            continue
+        if cp not in RECIPES:
+            raise ValueError(f"{filename}: missing {hex(cp)} and no recipe")
+        glyph, width = RECIPES[cp](font)
+        font["glyf"][gname] = glyph
+        font["hmtx"][gname] = (width, 60)
+        order = font.getGlyphOrder()
+        if gname not in order:
+            font.setGlyphOrder(order + [gname])
+        for table in cmap_table.tables:
+            if table.isUnicode():
+                table.cmap[cp] = gname
+
+RECIPES = {}
+
+STEPS = {"rename": step_rename, "metrics": step_metrics, "italic": step_italic,
+         "coverage": step_coverage}
+ORDER = ["rename", "metrics", "italic", "coverage"]   # later tasks append: features
 
 def run(steps, out_dir):
     os.makedirs(out_dir, exist_ok=True)

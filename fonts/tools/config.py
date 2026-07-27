@@ -23,6 +23,13 @@ VERSION = "Version 2.000"
 ITALIC_ANGLE = -17.0
 ITALIC_FILES = {"u001-ita", "u001-bolita", "u001con-ita", "u001con-bolita"}
 
+REQUIRED_CODEPOINTS = {
+    0x2013: "endash", 0x2014: "emdash", 0x20AC: "Euro",
+    0x201E: "quotedblbase", 0x201C: "quotedblleft", 0x201D: "quotedblright",
+    0x201A: "quotesinglbase", 0x2018: "quoteleft", 0x2019: "quoteright",
+    0x2026: "ellipsis", 0x2030: "perthousand",
+}
+
 _metrics_cache = None
 def metrics_targets():
     """typo = Regular's source values (canonical rhythm); win = union of
