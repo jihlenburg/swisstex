@@ -1,0 +1,34 @@
+% fonts/specimen/specimen.tex — build: xelatex -output-directory=fonts/build specimen.tex
+\documentclass{swisstex}
+% v1.3 hardcodes `Extension = .otf` plus a lowercase *-regular/-italic/
+% -bold/-bolditalic file-base pattern inside \setmainfont (see class
+% Sec. 3, "Schrift"). fonts/dist ships *-Regular.ttf / *-Bold.ttf (TTF,
+% capitalized suffix), so the brief's class-option path
+% (sans=SwissTeXGrotesk, sanscondensed=SwissTeXGroteskCond, ...) was
+% tested and fails: "Font ...=[SwissTeXGrotesk-regular.otf]/OT ... not
+% loadable: Metric (TFM) file or installed font not found." (confirmed
+% empirically before writing this file). Falling back to the mechanism
+% the brief itself sanctions: override by installed family name after
+% \documentclass — CoreText/fc-list resolves "SwissTeX Grotesk" and
+% "SwissTeX Grotesk Condensed" from ~/Library/Fonts (Task 7 install).
+% Note: the class already defines \condensed via \newfontfamily, so a
+% second \newfontfamily\condensed errors ("Command '\condensed' already
+% defined"); \renewfontfamily (fontspec's re-declare form) is required.
+\setmainfont{SwissTeX Grotesk}
+\renewfontfamily\condensed{SwissTeX Grotesk Condensed}
+\setrunningtitle{SwissTeX Grotesk \textbar{} Specimen}
+\begin{document}
+\swisstitle{Specimen}{SwissTeX Grotesk}{Modernized U001, 8 styles}
+\section{Style matrix}
+Regular \textit{Italic} \textbf{Bold} \textbf{\textit{Bold Italic}}\par
+{\condensed Condensed \textit{Italic} \textbf{Bold} \textbf{\textit{Bold Italic}}}
+\section{Character set}
+ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz
+0123456789 ÄÖÜäöüß – — € „Anführung“ ‚einfach` … ‰\par
+Kernprobe: AV AW AY TA Ta Te To Va Wo Ya r, v. y. 7.4
+\section{Grundtext}
+Der Grundtext läuft im Flattersatz mit Trennung. Die Grotesk hält das
+Basislinienraster von 13,5 Punkt über alle Schnitte, weil die
+Vertikalmasse der acht Schnitte vereinheitlicht sind.
+\colophon{SwissTeX Grotesk Specimen. Gesetzt mit swisstex v1.3.}
+\end{document}

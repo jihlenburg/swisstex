@@ -1,0 +1,34 @@
+% fonts/specimen/legibility.tex — decides spec §8 constants
+\documentclass{swisstex}
+% The class already defines \condensed via \newfontfamily (default
+% texgyreheroscn), so re-pointing it at the installed "SwissTeX Grotesk
+% Condensed" family requires \renewfontfamily, not \newfontfamily
+% (fontspec errors "Command '\condensed' already defined" otherwise —
+% see fonts/specimen/specimen.tex for the same finding, confirmed
+% empirically during Task 8).
+\setmainfont{SwissTeX Grotesk}
+\renewfontfamily\condensed{SwissTeX Grotesk Condensed}
+\setrunningtitle{Legibility gate}
+\begin{document}
+\swisstitle{Prüfdruck}{Lesbarkeitsprobe}{Fussnoten- und Schmalsatz-Entscheid}
+\section{Fussnotensatz: 8 auf 12 gegen 8 auf 10{,}125}
+{\condensed\fontsize{8}{12}\selectfont
+Die Wissenschaft hat festgestellt, dass die Trennlinie auf der Textachse
+steht und die Fussnote in der Schmalschrift läuft. Zwölf Punkt Durchschuss
+ist das bisherige Mass; es bindet erst nach acht Rasterzeilen wieder an.\par}
+\gridskip{1}
+{\condensed\fontsize{8}{10.125}\selectfont
+Die Wissenschaft hat festgestellt, dass die Trennlinie auf der Textachse
+steht und die Fussnote in der Schmalschrift läuft. Zehneinviertel Punkt
+Durchschuss ist das starke Verhältnis drei zu vier; es bindet nach drei
+Rasterzeilen wieder an.\par}
+\section{Schmalsatz bei 0{,}71-Kompression}
+\marg{Randglosse in der Schmalschrift bei voller Kompression: bleibt die
+Type bei 7{,}5 Punkt offen genug?}
+Der Grundtext dient als Umfeld. Zu prüfen ist die Marginalie links: wirken
+die Binnenräume der komprimierten Schnitte bei Glossengrösse noch offen,
+oder verlangt der Schmalsatz eine mildere Kompression durch Interpolation
+innerhalb der eigenen Schnitte?
+\colophon{Entscheid bitte im Spec §8/§12.2 nachtragen: Fussnotenmass und
+Kompressionsfrage.}
+\end{document}
