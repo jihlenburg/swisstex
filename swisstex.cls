@@ -1,0 +1,669 @@
+%% swisstex.cls
+%% Dokumentklasse fuer Sachtexte nach der Neuen Schweizer Schule.
+%%
+%% Entwurfsprinzip: Der gesamte Satzspiegel wird aus wenigen Kennzahlen
+%% abgeleitet. Es gibt keine handgesetzten Abstaende. Wer eine Kennzahl
+%% aendert, aendert das ganze System konsistent mit.
+%%
+%% Grundinvarianten
+%%   I1  Jeder vertikale Abstand ist ein ganzzahliges Vielfaches von \gridunit.
+%%   I2  Jede Linie und jeder Satzblock steht auf der Textachse.
+%%       Ausnahme sind ausdruecklich als Rahmen deklarierte Elemente
+%%       (Titel, Kolophon), die ueber das volle Mass laufen.
+%%   I3  Die Marginalspalte traegt nur Beschriftung, nie Satzmaterial.
+%%   I4  Eine Schriftfamilie. Differenzierung ueber Schnitt, Grad, Weite.
+%%   I5  Flattersatz mit Trennung und optischem Randausgleich.
+%%   I6  Ueberschriften haengen am nachfolgenden Block, nie am Seitenfuss.
+%%
+%% Lizenz: MIT (siehe LICENSE)
+%% ---------------------------------------------------------------------
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{swisstex}[2026/07/24 v1.3.0 Swiss typographic grid]
+
+\RequirePackage{iftex}
+\RequireXeTeX
+
+% ---------------------------------------------------------------------
+% 1  Kennzahlen
+% ---------------------------------------------------------------------
+\RequirePackage{kvoptions}
+\SetupKeyvalOptions{family=swiss,prefix=swiss@}
+
+\DeclareStringOption[13.5pt]{gridunit}     % Basislinienraster
+\DeclareStringOption[9.5pt]{bodysize}      % Grundschriftgrad
+\DeclareStringOption[210mm]{paperwidth}
+\DeclareStringOption[297mm]{paperheight}
+\DeclareStringOption[24mm]{outermargin}    % Steg links vom Raster
+\DeclareStringOption[30mm]{margincolumn}   % Marginalspalte
+\DeclareStringOption[7mm]{gutter}          % Bund zwischen den Spalten
+\DeclareStringOption[8mm]{numberzone}      % rechte Zone; zwei Stellen brauchen 7mm
+\DeclareStringOption[105mm]{textcolumn}    % Satzspiegel = Textachse
+\DeclareStringOption[26mm]{topmargin}
+\DeclareStringOption[51]{gridlines}        % Rasterzeilen je Seite
+\DeclareStringOption[255,55,37]{accent}    % Signalfarbe, RGB-Tripel
+\DeclareStringOption[255,105,91]{band}    % Farbe der Farbfelder
+\DeclareStringOption[234,232,208]{paper}  % Grundton der Seite
+\DeclareStringOption[26,26,26]{ink}       % Textfarbe
+\DeclareBoolOption[false]{tint}           % Grundton flaechig anlegen
+\DeclareStringOption[german]{lang}
+\DeclareBoolOption[false]{showgrid}        % Raster sichtbar machen
+\DeclareBoolOption[true]{rules}            % Haarlinie vor Abschnitten
+\DeclareStringOption[texgyreheros]{sans}          % Dateibasis
+\DeclareStringOption[texgyreheroscn]{sanscondensed}
+\DeclareStringOption[TeX Gyre Heros]{sansname}    % Familienname fuer Mathe
+\DeclareStringOption[TeX Gyre Heros Italic]{sansnameitalic}
+\DeclareStringOption[TeX Gyre DejaVu Math]{mathfont}
+\DeclareDefaultOption{\PassOptionsToClass{\CurrentOption}{article}}
+\ProcessKeyvalOptions*
+
+\LoadClass[10pt]{article}
+
+% ---------------------------------------------------------------------
+% 2  Abgeleitete Masse
+% ---------------------------------------------------------------------
+\RequirePackage{calc}
+
+\newlength{\gridunit}     \setlength{\gridunit}{\swiss@gridunit}
+\newlength{\margincolumn} \setlength{\margincolumn}{\swiss@margincolumn}
+\newlength{\gutter}       \setlength{\gutter}{\swiss@gutter}
+\newlength{\numberzone}   \setlength{\numberzone}{\swiss@numberzone}
+% Randglossen enden vor der Ziffernzone, damit sich beide nicht beruehren,
+% falls sie doch einmal auf derselben Zeile stehen.
+\newlength{\glosswidth}
+\setlength{\glosswidth}{\margincolumn-\numberzone}
+\newlength{\textcolumn}   \setlength{\textcolumn}{\swiss@textcolumn}
+
+% Volles Mass: Marginalspalte + Bund + Satzspiegel. Nur fuer Rahmenelemente.
+\newlength{\fullmeasure}
+\setlength{\fullmeasure}{\margincolumn+\gutter+\textcolumn}
+% Versatz, um von der Textachse auf das volle Mass auszubrechen.
+\newlength{\measureshift}
+\setlength{\measureshift}{-\margincolumn-\gutter}
+% Innerer Steg bis zur Textachse.
+\newlength{\innermargin}
+\setlength{\innermargin}{\swiss@outermargin+\margincolumn+\gutter}
+% Satzhoehe = Rasterzeilen mal Rastermass.
+\newlength{\swiss@textheight}
+\setlength{\swiss@textheight}{\swiss@gridlines\gridunit}
+
+\RequirePackage{geometry}
+\geometry{
+  paperwidth  = \swiss@paperwidth,
+  paperheight = \swiss@paperheight,
+  left        = \innermargin,
+  right       = \swiss@paperwidth-\innermargin-\textcolumn,
+  top         = \swiss@topmargin,
+  textheight  = \swiss@textheight,
+  marginparwidth = \glosswidth,
+  marginparsep   = \dimexpr\gutter+\numberzone\relax,
+  headsep     = 10mm,
+  footskip    = 14mm}
+\reversemarginpar
+
+% ---------------------------------------------------------------------
+% 3  Schrift  (I4)
+% ---------------------------------------------------------------------
+\RequirePackage{fontspec}
+\RequirePackage{polyglossia}
+\setdefaultlanguage{\swiss@lang}
+
+\setmainfont{\swiss@sans}[
+  Extension = .otf, UprightFont = *-regular, ItalicFont = *-italic,
+  BoldFont = *-bold, BoldItalicFont = *-bolditalic, Ligatures = TeX]
+\newfontfamily\condensed{\swiss@sanscondensed}[
+  Extension = .otf, UprightFont = *-regular, ItalicFont = *-italic,
+  BoldFont = *-bold, BoldItalicFont = *-bolditalic, Ligatures = TeX]
+
+\RequirePackage[fleqn]{amsmath}
+\RequirePackage{unicode-math}
+\setmathfont{\swiss@mathfont}
+\setmathfont[range=\mathup]{\swiss@sansname}
+\setmathfont[range=\mathit]{\swiss@sansnameitalic}
+\setlength{\mathindent}{0pt}
+
+\RequirePackage[protrusion=true,expansion=false]{microtype}
+
+% ---------------------------------------------------------------------
+% 4  Farbe
+% ---------------------------------------------------------------------
+\RequirePackage{xcolor}
+\definecolor{accent}{RGB}{\swiss@accent}
+\definecolor{band}{RGB}{\swiss@band}
+\definecolor{paper}{RGB}{\swiss@paper}
+\definecolor{ink}{RGB}{\swiss@ink}
+\definecolor{quiet}{gray}{0.42}
+\definecolor{hairline}{gray}{0.62}
+\AtBeginDocument{\color{ink}}
+
+% ---------------------------------------------------------------------
+% 5  Grundsatz  (I1, I5)
+% ---------------------------------------------------------------------
+\RequirePackage{ragged2e}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\gridunit}
+\AtBeginDocument{%
+  \fontsize{\swiss@bodysize}{\gridunit}\selectfont
+  \RaggedRight
+  \setlength{\RaggedRightRightskip}{0pt plus 3.2em}%
+  \setlength{\abovedisplayskip}{\gridunit}%
+  \setlength{\belowdisplayskip}{\gridunit}%
+  \setlength{\abovedisplayshortskip}{\gridunit}%
+  \setlength{\belowdisplayshortskip}{\gridunit}}
+\raggedbottom
+\setlength{\emergencystretch}{1em}
+% Starrer \topskip fixiert die erste Grundlinie jeder Seite und macht
+% das Raster seitenabsolut adressierbar.
+\setlength{\topskip}{\gridunit}
+
+% n Rasterzeilen vertikaler Raum
+\newcommand{\gridskip}[1]{\par\vspace{\dimexpr#1\gridunit\relax}}
+
+% ---------------------------------------------------------------------
+% 5a  Rasterprimitive
+% Beliebige Blöcke (Titel, Tabellen, Abbildungen, Formeln) haben keine
+% Höhe im Rastermass. \snaptogrid füllt auf das nächste Vielfache auf und
+% übergibt das Raster unversehrt an den folgenden Satz. Das ersetzt jede
+% handgesetzte Ausgleichskorrektur.
+% ---------------------------------------------------------------------
+\newsavebox{\swiss@gbox}
+\newlength{\swiss@gh}
+
+% Aufrunden ohne Modulo: ceil(a/g) = round((2a+g-2)/(2g))
+\newcommand{\swiss@ceil}[1]{%
+  \the\numexpr(2*\number#1+\number\gridunit-2)/(2*\number\gridunit)\relax}
+
+% Blockplatzierung ohne Rasterbruch.
+%
+% Der Kern: ein Block wird so umgepackt, dass er sich wie eine Folge
+% ganzer Zeilen verhaelt. Oberkante auf \ht\strutbox, Tiefe auf ein
+% Vielfaches des Rastermasses aufgefuellt. Dann greift der normale
+% Zeilenausgleich von TeX, und zwar mitten auf der Seite ebenso wie am
+% Seitenanfang, wo statt dessen \topskip wirkt (deshalb \topskip =
+% \gridunit, siehe Abschnitt 5).
+%
+% Abschliessend folgt eine unsichtbare Zeile mit Standardtiefe. Sie setzt
+% \prevdepth dauerhaft auf den Wert, mit dem der Ausgleich der naechsten
+% Grundlinie rechnet. Eine blosse Zuweisung an \prevdepth genuegt nicht,
+% weil die Groesse gruppenlokal ist und das schliessende \endgroup der
+% Umgebung sie zuruecksetzt.
+%
+% Bilanz von Grundlinie B0 bis zur naechsten Grundlinie B1:
+%   B1 - B0 = \gridunit + n*\gridunit + \parskip + \gridunit = (n+3)*\gridunit
+\newlength{\swiss@gd}
+\newcommand{\swiss@placebox}[2]{%
+  % #1 = Box, #2 = Linksversatz als Dimension
+  \par
+  \setbox#1=\hbox{\raise\dimexpr\ht\strutbox-\ht#1\relax\box#1}%
+  \setlength{\swiss@gh}{\dp#1}%
+  \ifdim\swiss@gh<\z@ \setlength{\swiss@gh}{\z@}\fi
+  \edef\swiss@gn{\swiss@ceil{\swiss@gh}}%
+  \dp#1=\dimexpr\swiss@gn\gridunit\relax
+  \moveleft#2\box#1%
+  \nointerlineskip
+  \hbox{\vrule\@width\z@\@height\z@\@depth\dp\strutbox}%
+  \relax}
+
+% \snaptogrid{...}  setzt den Inhalt und stellt das Raster wieder her.
+\newcommand{\snaptogrid}[1]{%
+  \par\sbox{\swiss@gbox}{\begin{minipage}{\linewidth}#1\end{minipage}}%
+  \swiss@placebox{\swiss@gbox}{\z@}}
+
+% Umgebungsform, auch für abgesetzte Formeln geeignet.
+\newenvironment{gridblock}
+  {\par\begin{lrbox}{\swiss@gbox}\begin{minipage}{\linewidth}}
+  {\end{minipage}\end{lrbox}\swiss@placebox{\swiss@gbox}{\z@}}
+
+
+
+% ---------------------------------------------------------------------
+% 5c  Anzeigengrade
+% Auch Schaugroessen bleiben am Raster: der Durchschuss ist ein Vielfaches
+% des Rastermasses, der Schriftgrad wird daraus abgeleitet. Grosse Grade
+% bekommen negative Laufweite, wie im Schaugebrauch der Grotesk ueblich.
+% \swissdisplay{n} setzt n Rasterzeilen Durchschuss.
+% ---------------------------------------------------------------------
+\newcommand{\swiss@displayratio}{0.80}
+\newcommand{\swissdisplay}[1]{%
+  \fontsize{\dimexpr\swiss@displayratio\dimexpr#1\gridunit\relax\relax}%
+           {\dimexpr#1\gridunit\relax}\selectfont
+  \ifnum#1>2\addfontfeature{LetterSpace=-1.6}\fi}
+
+% Weiss auf Farbe, fuer Baender und Umschlaege
+\newcommand{\reverse}[1]{\textcolor{white}{#1}}
+
+
+% ---------------------------------------------------------------------
+% 5b  Rasterfang fuer fremde Umgebungen
+% \swiss@placebox loest das Rasterproblem fuer selbst gebaute Bloecke.
+% Umgebungen aus LaTeX und anderen Paketen bringen eigene Abstaende mit.
+% \gridsnap stellt das Raster danach wieder her, ohne die Umgebung zu
+% kennen: \pagetotal ist nach \par seitenrichtig, der Ausgleich fuellt auf
+% die naechste Kongruenz \pagetotal = 0 (mod \gridunit) auf, und die
+% unsichtbare Abschlusszeile setzt \prevdepth dauerhaft auf Standardtiefe.
+% ---------------------------------------------------------------------
+\newcommand{\gridsnap}{%
+  \par
+  \ifdim\pagetotal>\z@
+    \setlength{\swiss@gh}{\pagetotal}%
+    \edef\swiss@gn{\swiss@ceil{\swiss@gh}}%
+    \vskip\dimexpr\swiss@gn\gridunit-\swiss@gh\relax
+    \nointerlineskip
+    \hbox{\vrule\@width\z@\@height\z@\@depth\dp\strutbox}%
+  \fi
+  \relax}
+
+% Umgebungen, die eigene Abstaende mitbringen, werden automatisch gefangen.
+\RequirePackage{etoolbox}
+% \AtEndEnvironment liefe noch vor dem Schlusscode der Umgebung und damit
+% vor deren eigenem Abstand. Der Fang muss danach greifen.
+\newcommand{\gridsnapenv}[1]{\AfterEndEnvironment{#1}{\gridsnap}}
+\AtBeginDocument{%
+  \@for\swiss@e:={quote,quotation,verbatim,description,%
+                  equation,displaymath,eqnarray,align,gather,multline}\do{%
+    \expandafter\gridsnapenv\expandafter{\swiss@e}}%
+  \@for\swiss@e:={equation*,align*,gather*,multline*}\do{%
+    \expandafter\gridsnapenv\expandafter{\swiss@e}}}
+
+% ---------------------------------------------------------------------
+% 6  Umbruchsteuerung  (I6)
+% ---------------------------------------------------------------------
+\RequirePackage{needspace}
+\widowpenalty=10000
+\clubpenalty=10000
+\displaywidowpenalty=10000
+\predisplaypenalty=10000
+\brokenpenalty=10000
+
+% ---------------------------------------------------------------------
+% 7  Kolumnentitel
+% ---------------------------------------------------------------------
+\RequirePackage{fancyhdr}
+\newcommand{\runningtitle}{}
+\newcommand{\setrunningtitle}[1]{\renewcommand{\runningtitle}{#1}}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[L]{%
+  \hspace*{\measureshift}%
+  \makebox[0pt][l]{%
+    \condensed\fontsize{7.5}{9}\selectfont\color{quiet}%
+    \makebox[\dimexpr\margincolumn+\gutter\relax][l]{\textcolor{accent}{\thepage}}%
+    \runningtitle}}
+\fancypagestyle{swisstitle}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}}
+
+% ---------------------------------------------------------------------
+% 8  Gliederung  (I2, I3, I6)
+% ---------------------------------------------------------------------
+\RequirePackage{titlesec}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+
+% Beschriftung haengt links in der Marginalspalte, ausserhalb der Linien.
+% \smash haelt die Ziffer aus der Zeilenhoehe heraus, damit ein grosser
+% Grad in der Marginalspalte das Raster nicht anhebt.
+\newcommand{\marginlabel}[1]{%
+  \makebox[0pt][r]{\smash{\textcolor{accent}{#1}}\hspace*{\gutter}}}
+% Grosse Ziffer in der Marginalspalte: das auffaelligste Mittel der
+% Neuen Schweizer Schule, Gliederung ohne zusaetzliche Auszeichnung.
+\newcommand{\sectionnumberstyle}{\condensed\swissdisplay{2}\bfseries}
+
+% Haarlinie auf der Textachse, zwei Rasterzeilen Vorlauf.
+% Die Haarlinie laeuft ueber dieselbe Blockplatzierung wie Tabellen und
+% Titel. Ein roher \hbox mit \nointerlineskip wuerde \prevdepth auf null
+% setzen und das Raster um die Tiefe der Vorzeile verschieben.
+\newsavebox{\swiss@rbox}
+\newcommand{\sectionrule}{%
+  \par\Needspace*{12\gridunit}\penalty-150\vspace{\gridunit}%
+  \ifswiss@rules
+    \sbox{\swiss@rbox}{\color{hairline}%
+      \vrule\@height0.4pt\@depth\z@\@width\textcolumn}%
+    \swiss@placebox{\swiss@rbox}{\z@}%
+  \else
+    \vspace{\gridunit}%
+  \fi}
+
+\titleformat{\section}[hang]
+  {\normalfont\swissdisplay{1}\bfseries}
+  {\marginlabel{{\sectionnumberstyle\thesection}}}{0pt}{}
+\titlespacing*{\section}{0pt}{0pt}{0pt}
+
+\titleformat{\subsection}[hang]
+  {\normalfont\fontsize{\swiss@bodysize}{\gridunit}\selectfont\bfseries}
+  {\marginlabel{\normalfont\condensed\fontsize{9}{\gridunit}\selectfont
+                \thesubsection}}{0pt}{}
+\titlespacing*{\subsection}{0pt}{\gridunit}{-\gridunit}
+
+% Dritte Ebene: unnummeriert, Auszeichnung nur ueber den Schnitt.
+\titleformat{\subsubsection}[runin]
+  {\normalfont\fontsize{\swiss@bodysize}{\gridunit}\selectfont\bfseries}
+  {}{0pt}{}[\hspace{0.5em}]
+\titlespacing*{\subsubsection}{0pt}{\gridunit}{0.5em}
+
+% Die Linie wird automatisch gesetzt; kein manueller Aufruf noetig.
+% Ein Unterabschnitt direkt nach einer Abschnittsueberschrift wird fest
+% angebunden, sonst verlangt er selbst Anschluss.
+\newif\if@aftersection
+\let\swiss@section\section
+\def\section{\@ifstar{\sectionrule\swiss@sec@star}{\sectionrule\swiss@sec@norm}}
+\def\swiss@sec@norm#1{\swiss@section{#1}\global\@aftersectiontrue}
+\def\swiss@sec@star#1{\swiss@section*{#1}\global\@aftersectiontrue}
+\let\swiss@subsection\subsection
+\def\swiss@subguard{%
+  \if@aftersection\nopagebreak[4]\else\Needspace*{6\gridunit}\fi
+  \global\@aftersectionfalse}
+\def\subsection{\@ifstar{\swiss@subguard\swiss@subsection*}%
+                        {\swiss@subguard\swiss@subsection}}
+
+% ---------------------------------------------------------------------
+% 9  Marginalie  (I3)
+% ---------------------------------------------------------------------
+% \leavevmode ist entscheidend: im vertikalen Modus setzt \marginpar die
+% Glosse dorthin, wo der Satz gerade steht -- nach einer Ueberschrift also
+% neben deren Ziffer. Mit \leavevmode beginnt zuerst der Absatz, und die
+% Glosse haengt an dessen erster Zeile, eine Rasterzeile tiefer.
+% \ignorespaces ist die Kehrseite von \leavevmode: im horizontalen Modus
+% wird der Zeilenumbruch hinter dem Aufruf zum Wortabstand und ruecht das
+% erste Wort des Absatzes ein. Im vertikalen Modus fiel er weg.
+\newcommand{\marg}[1]{%
+  \leavevmode
+  \marginpar{\raggedright\condensed\fontsize{7.5}{10}\selectfont
+             \color{quiet}#1\par}%
+  \ignorespaces}
+
+
+% ---------------------------------------------------------------------
+% 9a  Fussnoten
+% Trennlinie auf der Textachse statt auf 40 Prozent der Spaltenbreite,
+% Text in der Schmalschrift wie Marginalien und Tabellen.
+% ---------------------------------------------------------------------
+\renewcommand{\footnoterule}{%
+  \kern-3\p@{\color{hairline}\hrule\@height0.4\p@\@width\textcolumn}\kern2.6\p@}
+\renewcommand{\@makefntext}[1]{%
+  \parindent\z@\noindent
+  \makebox[1.4em][l]{\textcolor{accent}{\@thefnmark}}#1}
+\AtBeginDocument{%
+  \renewcommand{\footnotesize}{\condensed\fontsize{8}{12}\selectfont}}
+
+% Randnotiz mit Zaehler als Alternative zur Fussnote.
+\newcounter{sidenote}
+\newcommand{\sidenote}[1]{%
+  \refstepcounter{sidenote}%
+  \textsuperscript{\textcolor{accent}{\thesidenote}}%
+  \marginpar{\raggedright\condensed\fontsize{7.5}{10}\selectfont\color{quiet}%
+    \textcolor{accent}{\thesidenote}\hspace{0.4em}#1\par}}
+
+% ---------------------------------------------------------------------
+% 10  Titelblock und Kolophon  (Rahmenelemente, volles Mass)
+% ---------------------------------------------------------------------
+\newcommand{\tracked}[1]{{\condensed\fontsize{7.5}{9}\selectfont
+  \addfontfeature{LetterSpace=16}\MakeUppercase{#1}}}
+
+% \swisstitle{Kennzeichnung}{Titel}{Untertitel}
+\newcommand{\swisstitle}[3]{%
+  \thispagestyle{swisstitle}%
+  \par\sbox{\swiss@gbox}{%
+    \begin{minipage}{\fullmeasure}%
+      \tracked{#1}\par\vspace{6pt}
+      {\fontsize{21}{23}\selectfont #2\par}%
+      \vspace{9pt}
+      {\fontsize{10.5}{\gridunit}\selectfont\color{quiet}#3\par}%
+      \vspace{\gridunit}
+      {\color{black}\hrule height 1.2pt}%
+    \end{minipage}}%
+  \swiss@placebox{\swiss@gbox}{-\measureshift}}
+
+\newcommand{\colophon}[1]{%
+  \par\vfill\noindent\hspace*{\measureshift}%
+  \begin{minipage}{\fullmeasure}%
+    {\color{hairline}\rule{\fullmeasure}{0.4pt}}\par\vspace{6pt}
+    {\condensed\fontsize{7}{10}\selectfont\color{quiet}#1\par}%
+  \end{minipage}\par}
+
+\newenvironment{lead}
+  {\par\begingroup\fontsize{10.5}{\gridunit}\selectfont}
+  {\par\endgroup}
+
+
+% ---------------------------------------------------------------------
+% 10a  Umschlag und Farbfelder
+%
+% Farbfelder sind Rahmenelemente: sie laufen ueber das volle Mass oder
+% randabfallend und sind von der Spaltenregel ausgenommen. Ihre Hoehe
+% bleibt am Raster, weil sie ueber \swiss@placebox gesetzt werden.
+% ---------------------------------------------------------------------
+
+% \swissband[n]{Inhalt}
+% Farbfeld ueber das volle Mass, n Rasterzeilen hoch, Satz in Weiss.
+\newsavebox{\swiss@bbox}
+\newcommand{\swissbandpadding}{\gridunit}   % Innenabstand des Feldes
+\newcommand{\swissbandlead}{1}              % sichtbare Blindzeilen darueber
+% Der Innenabstand laeuft ueber \leftskip und \rightskip, nicht ueber eine
+% geschachtelte Box: eine ueber \begin und \end geteilte \hbox-Klammer
+% liefe gegen die Gruppe, die LaTeX um jede Umgebung legt.
+% Der Vorabstand steckt jetzt in \swiss@placeink, nicht in einem \vspace.
+% Vorabstand: eine Rasterzeile geht fuer die Blockplatzierung drauf,
+% \swissbandlead zaehlt die sichtbaren Blindzeilen darueber hinaus.
+\newenvironment{swissband}
+  {\par\nopagebreak[4]%
+   \vspace{\dimexpr\swissbandlead\gridunit+\gridunit\relax}%
+   \begin{lrbox}{\swiss@bbox}%
+   \begin{minipage}{\fullmeasure}%
+     \vspace{\swissbandpadding}%
+     \color{white}\RaggedRight
+     \setlength{\leftskip}{\gutter}%
+     \advance\rightskip by \gutter\relax}
+  {  \par\vspace{\swissbandpadding}%
+   \end{minipage}\end{lrbox}%
+   % Die Flaeche wird auf ganze Rasterzeilen zuzueglich der Strutoberlaenge
+   % gefuellt. Dann geht die Rundung der Blockplatzierung glatt auf, und der
+   % Weissraum unter dem Feld bleibt bei zwei Rasterzeilen statt bei drei.
+   % Ganzzahlig ist damit nicht das Feld, sondern das Modul aus Blindzeile,
+   % Feld und Blindzeile -- genau die Ordnung, die Mueller-Brockmann meint.
+   % Die Flaeche wird auf k Rasterzeilen abzueglich der Strutunterlaenge
+   % gefuellt. Damit ergibt der Verbund aus Blindzeile, Feld und Blindzeile
+   % ganze Rasterzeilen, und unter dem Feld bleiben zwei Zeilen Luft.
+   % Farbflaechen sind keine Satzbloecke. Ein Satzblock beginnt mit einer
+   % Textzeile, deren Grundlinie ins Raster gehoert; eine Flaeche hat keine
+   % Oberlaenge, ihre Kante ist die Kante. Nach Mueller-Brockmann liegt
+   % zwischen Satz und Feld eine Blindzeile. Sie wird als transparente
+   % Zeile in den Block gesetzt, damit die bewaehrte Platzierung greift.
+   \setlength{\swiss@gh}{\dimexpr\ht\swiss@bbox+\dp\swiss@bbox\relax}%
+   \edef\swiss@gn{\swiss@ceil{\swiss@gh}}%
+   \sbox{\swiss@gbox}{\vbox{\offinterlineskip
+     \hbox{\fboxsep\z@\colorbox{band}{%
+       \vbox to\dimexpr\swiss@gn\gridunit+\ht\strutbox\relax{%
+         \hbox{\usebox{\swiss@bbox}}\vfil}}}}}%
+   \swiss@placebox{\swiss@gbox}{-\measureshift}}
+
+% \swisscover{Kennzeichnung}{Titel}{Untertitel}{Fusszeile}
+% Randabfallende Umschlagseite. Der Titel laeuft auf vier Rasterzeilen
+% Durchschuss, das Farbfeld sitzt auf dem Raster des Satzspiegels.
+% Ueberformat-Zeichen: Groesse in Rasterzeilen, Lage in Seitenanteilen.
+\newcommand{\swisscoverglyph}{a}
+\newcommand{\swisscoverglyphsize}{34}
+\newcommand{\swisscoverglyphx}{0.52}
+\newcommand{\swisscoverglyphy}{0.60}
+\newcommand{\swisscover}[4]{%
+  \begingroup
+  \thispagestyle{swisstitle}%
+  \AddToShipoutPictureBG*{%
+    \ifswiss@tint\else
+      \AtPageLowerLeft{\color{paper}\rule{\paperwidth}{\paperheight}}%
+    \fi
+    % Ueberformat: Zeichen randabfallend rechts, im Ton des Grundes
+    \AtPageUpperLeft{\put(\LenToUnit{\swisscoverglyphx\paperwidth},%
+                          \LenToUnit{-\swisscoverglyphy\paperheight}){%
+      \makebox[0pt][l]{\color{white}%
+        \fontsize{\dimexpr\swisscoverglyphsize\gridunit\relax}%
+                 {\dimexpr\swisscoverglyphsize\gridunit\relax}%
+        \selectfont\swisscoverglyph}}}%
+    % Farbband ueber die untere Seitenbreite
+    \AtPageLowerLeft{\put(0,\LenToUnit{0.13\paperheight}){%
+      \color{band}\rule{\paperwidth}{\dimexpr9\gridunit\relax}}}}%
+  \null\vspace*{\dimexpr6\gridunit\relax}%
+  \noindent\hspace*{\measureshift}%
+  \begin{minipage}{\fullmeasure}%
+    \color{ink}%
+    \tracked{#1}\par\vspace{\dimexpr2\gridunit\relax}
+    {\swissdisplay{4}\bfseries #2\par}%
+    \vspace{\dimexpr2\gridunit\relax}
+    {\swissdisplay{1}\color{accent}#3\par}%
+  \end{minipage}%
+  \vfill
+  % Die Fusszeile sitzt im Farbband und laeuft deshalb in Weiss.
+  \noindent\hspace*{\measureshift}%
+  \begin{minipage}{\fullmeasure}%
+    \condensed\fontsize{8}{\gridunit}\selectfont\color{white}#4\par
+  \end{minipage}%
+  \vspace*{\dimexpr4\gridunit\relax}%
+  \newpage\endgroup}
+
+% ---------------------------------------------------------------------
+% 11  Tabellen  (I2, I3)
+% Koerper auf der Textachse, Nummer und Titel in der Marginalspalte.
+% Die Bindung an das Vorangehende verhindert verwaiste Ueberschriften.
+% ---------------------------------------------------------------------
+\RequirePackage{booktabs}
+\RequirePackage{tabularx}
+\RequirePackage{array}
+\setlength{\aboverulesep}{0pt}
+\setlength{\belowrulesep}{0pt}
+\setlength{\heavyrulewidth}{0.5pt}
+\setlength{\lightrulewidth}{0.4pt}
+\renewcommand{\arraystretch}{1}
+
+\newcolumntype{L}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{S}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\newcommand{\tabhead}[1]{\condensed\bfseries #1}
+
+\newcounter{swisstable}
+\renewcommand{\theswisstable}{\arabic{swisstable}}
+\newcommand{\tablecaptionprefix}{Tabelle}
+
+% \begin{swisstable}{Legende}  ...  \end{swisstable}
+% Die Tabelle darin muss \begin{tabularx}{\textcolumn}[t]{...} verwenden,
+% damit Legende und Kopfzeile fluchten.
+\newsavebox{\swiss@tbox}
+\newenvironment{swisstable}[1]
+  {\par\nopagebreak[4]\vspace{\gridunit}%
+   \refstepcounter{swisstable}%
+   \begin{lrbox}{\swiss@tbox}%
+   \begin{minipage}[t]{\glosswidth}%
+     \raggedright\condensed\fontsize{7.5}{10}\selectfont\color{quiet}%
+     \textcolor{accent}{\tablecaptionprefix~\theswisstable}\\[1pt]#1%
+   \end{minipage}%
+   \hspace{\dimexpr\gutter+\numberzone\relax}%
+   \begin{minipage}[t]{\textcolumn}%
+     \condensed\fontsize{8}{12}\selectfont}
+  {\end{minipage}\end{lrbox}%
+   \swiss@placebox{\swiss@tbox}{-\measureshift}}
+
+% Hinweis: tabularx laesst sich nicht in eine eigene Umgebung wickeln,
+% weil es seinen Rumpf bis zum woertlichen \end{tabularx} einliest.
+% Innerhalb von swisstable daher direkt schreiben:
+%   \begin{tabularx}{\textcolumn}[t]{@{}S{28mm}@{\hspace{4mm}}L@{}}
+% Das [t] ist zwingend, sonst fluchtet die Legende auf die Tabellenmitte.
+
+
+% ---------------------------------------------------------------------
+% 11a  Abbildungen
+% Gegenstueck zu swisstable: Bildkoerper auf der Textachse, Nummer und
+% Legende in der Marginalspalte, Rasterfang ueber dieselbe Platzierung.
+% Kein Gleitobjekt -- die Abbildung steht, wo sie geschrieben ist.
+% ---------------------------------------------------------------------
+\RequirePackage{graphicx}
+\newcounter{swissfigure}
+\renewcommand{\theswissfigure}{\arabic{swissfigure}}
+\newcommand{\figurecaptionprefix}{Abbildung}
+\newsavebox{\swiss@fbox}
+\newsavebox{\swiss@fcont}
+\newsavebox{\swiss@fcap}
+\newlength{\figcapdrop}\setlength{\figcapdrop}{0.76pt}
+% Die Legende steht in der Marginalspalte NEBEN der Abbildung und fluchtet
+% mit deren Oberkante. Dazu wird der Inhalt zuerst gemessen; die Legendenbox
+% wird dann um (Inhaltshoehe - eigene Hoehe) gehoben. Eine [t]-Ausrichtung
+% genuegt nicht, weil TikZ- und Bildboxen ihre Referenzlinie unten tragen
+% und die Legende sonst an der Unterkante landet.
+\newenvironment{swissfigure}[1]
+  {\par\nopagebreak[4]\vspace{\gridunit}%
+   \refstepcounter{swissfigure}%
+   \sbox{\swiss@fcap}{\begin{minipage}[t]{\glosswidth}%
+     \raggedright\condensed\fontsize{7.5}{10}\selectfont\color{quiet}%
+     \textcolor{accent}{\figurecaptionprefix~\theswissfigure}\\[1pt]#1%
+   \end{minipage}}%
+   \begin{lrbox}{\swiss@fcont}%
+   \begin{minipage}[t]{\textcolumn}}
+  {\end{minipage}\end{lrbox}%
+   \sbox{\swiss@fbox}{%
+     % \figcapdrop senkt die Legende um die Differenz zwischen Ascender und
+     % Versalhoehe, damit die sichtbare Schriftoberkante mit der
+     % Abbildungsoberkante fluchtet. Pruefung A9 misst die Fluchtung.
+     \raisebox{\dimexpr\ht\swiss@fcont-\ht\swiss@fcap-\figcapdrop\relax}%
+       {\usebox{\swiss@fcap}}%
+     \hspace{\dimexpr\gutter+\numberzone\relax}%
+     \usebox{\swiss@fcont}}%
+   \swiss@placebox{\swiss@fbox}{-\measureshift}}
+
+% Bild auf Satzspiegelbreite
+\newcommand{\swissgraphic}[2][]{%
+  \includegraphics[width=\textcolumn,#1]{#2}}
+
+% ---------------------------------------------------------------------
+% 12  Listen
+% ---------------------------------------------------------------------
+\RequirePackage{enumitem}
+% labelindent=0pt haelt die Marke auf der Textachse; ohne das haengt sie
+% in den Bund und verletzt die Spaltenregel.
+\setlist{labelindent=0pt,align=left}
+\setlist[itemize]{leftmargin=1.4em,labelwidth=1.4em,labelsep=0pt,
+  itemsep=0pt,parsep=0pt,topsep=-\gridunit,partopsep=0pt,
+  label=\textcolor{accent}{\textbf{--}}}
+\setlist[enumerate]{leftmargin=1.6em,labelwidth=1.6em,labelsep=0pt,
+  itemsep=0pt,parsep=0pt,topsep=-\gridunit,partopsep=0pt,
+  label=\textcolor{accent}{\arabic*}}
+\setlist[description]{leftmargin=0pt,itemsep=0pt,parsep=0pt,
+  topsep=-\gridunit,partopsep=0pt,font=\normalfont\bfseries}
+
+% Zitat: gleiche Abstandslogik wie die Listen, kein Kursivsatz.
+\renewenvironment{quote}
+  {\list{}{\leftmargin=1.4em\rightmargin=\z@
+           \topsep=-\gridunit\parsep=\z@\partopsep=\z@\itemsep=\z@}%
+   \item\relax}
+  {\endlist}
+
+% ---------------------------------------------------------------------
+% 13  Rasterkontrolle
+% Legt das Basislinienraster und die Spaltenkanten sichtbar unter den Satz.
+% ---------------------------------------------------------------------
+\RequirePackage{eso-pic}
+\ifswiss@tint
+  \AddToShipoutPictureBG*{\AtPageLowerLeft{%
+    \color{paper}\rule{\paperwidth}{\paperheight}}}
+\fi
+\ifswiss@showgrid
+  \AddToShipoutPictureBG{%
+    \begingroup
+    \color{accent!25}%
+    \AtPageUpperLeft{%
+      \put(\LenToUnit{\innermargin},\LenToUnit{-\swiss@topmargin}){%
+        \begin{picture}(0,0)
+          \multiput(0,0)(0,-\LenToUnit{\gridunit}){\swiss@gridlines}%
+            {\line(1,0){\LenToUnit{\textcolumn}}}
+        \end{picture}}%
+      \put(\LenToUnit{\swiss@outermargin},\LenToUnit{-\swiss@topmargin}){%
+        \color{accent!40}\line(0,-1){\LenToUnit{\swiss@textheight}}}%
+      \put(\LenToUnit{\innermargin},\LenToUnit{-\swiss@topmargin}){%
+        \color{accent!40}\line(0,-1){\LenToUnit{\swiss@textheight}}}%
+      \put(\LenToUnit{\innermargin+\textcolumn},\LenToUnit{-\swiss@topmargin}){%
+        \color{accent!40}\line(0,-1){\LenToUnit{\swiss@textheight}}}}%
+    \endgroup}
+\fi
+
+% ---------------------------------------------------------------------
+% 14  Metadaten
+% ---------------------------------------------------------------------
+\RequirePackage[hidelinks,bookmarks=true,bookmarksnumbered=true]{hyperref}
+
+\endinput

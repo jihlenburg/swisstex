@@ -1,0 +1,63 @@
+\documentclass[showgrid=true]{swisstex}
+
+\setrunningtitle{SwissTeX \textbar{} Minimalbeispiel}
+\hypersetup{pdftitle={SwissTeX Minimalbeispiel}}
+
+\begin{document}
+
+\swisstitle{Minimalbeispiel}
+  {SwissTeX\\Raster und Grundelemente}
+  {Prüffall für Satzspiegel, Basislinienraster und Umbruchsteuerung}
+
+\marg{Die Rasterkontrolle ist mit \texttt{showgrid=true} eingeschaltet}
+\begin{lead}
+Dieser Text steht im Vorspann. Er läuft auf 10,5\,pt über dieselbe
+Rasterzeile von 13,5\,pt wie der Grundtext und bleibt deshalb in der Flucht.
+\end{lead}
+
+\section{Abschnitt mit Haarlinie}
+
+\subsection{Grundtext}
+
+Der Grundtext läuft im Flattersatz mit Trennung und optischem Randausgleich.
+Absätze sind durch genau eine Rasterzeile getrennt, nicht durch einen Einzug.
+
+Ein zweiter Absatz zeigt den Abstand. Alle vertikalen Masse sind ganzzahlige
+Vielfache des Rastermasses, sodass die Grundlinien über Spalten und Seiten
+hinweg fluchten.
+
+\subsection{Formelsatz}
+
+Formeln stehen linksbündig auf der Textachse:
+
+\begin{gridblock}
+\begin{equation*}
+\gamma=\frac{\mathrm{d}n/\mathrm{d}T}{n-1}-\alpha .
+\end{equation*}
+\end{gridblock}
+
+\section{Tabellen}
+
+\subsection{Legende in der Marginalspalte}
+
+\begin{swisstable}{Beispieltabelle mit Legende in der Marginalspalte}
+\begin{tabularx}{\textcolumn}[t]{@{}S{28mm}@{\hspace{4mm}}L@{}}
+\toprule
+\tabhead{Merkmal} & \tabhead{Beschreibung} \\
+\midrule
+Satzspiegel & Der Tabellenkörper steht auf der Textachse und ist so breit
+  wie der Grundtext. \\
+\addlinespace[3.5pt]
+Marginalspalte & Trägt Nummer und Titel der Tabelle, nie Satzmaterial. \\
+\addlinespace[3.5pt]
+Linien & Nur waagerechte Haarlinien, keine senkrechten. \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+
+Nach der Tabelle setzt der Grundtext wieder auf dem Raster auf.
+
+\colophon{Gesetzt mit SwissTeX. Grundschrift TeX Gyre Heros,
+9,5/13,5\,pt, Satzspiegel 105\,mm, Marginalspalte 30\,mm.}
+
+\end{document}

@@ -1,0 +1,290 @@
+\documentclass[tint=true]{swisstex}
+
+\setrunningtitle{SwissTeX \textbar{} Klassendokumentation}
+\hypersetup{pdftitle={SwissTeX -- Satzsystem nach der Neuen Schweizer Schule}}
+
+\newcommand{\code}[1]{{\condensed\fontsize{8.5}{\gridunit}\selectfont #1}}
+
+\begin{document}
+
+\swisscover{Dokumentation}{SwissTeX}{Satzsystem nach der Neuen Schweizer Schule}
+  {Version 1.3.0 \textbar{} TeX Gyre Heros \textbar{} Raster 13,5\,pt
+   \textbar{} Satzspiegel 105\,mm}
+
+\begin{lead}
+SwissTeX leitet den gesamten Satzspiegel aus sieben Kennzahlen ab. Es gibt
+keine handgesetzten Abstände. Wer eine Kennzahl ändert, ändert das System
+konsistent mit. Diese Dokumentation ist mit der Klasse selbst gesetzt.
+\end{lead}
+
+\section{Invarianten}
+
+\subsection{Die sechs Regeln}
+
+Die Klasse ist auf sechs Aussagen gebaut. Alles andere folgt daraus.
+
+\begin{swisstable}{Invarianten der Klasse und ihre technische Durchsetzung}
+\begin{tabularx}{\textcolumn}[t]{@{}S{8mm}@{\hspace{3mm}}S{30mm}@{\hspace{3mm}}L@{}}
+\toprule
+\tabhead{Nr.} & \tabhead{Regel} & \tabhead{Durchsetzung} \\
+\midrule
+I1 & Jeder vertikale Abstand ist ein Vielfaches des Rastermasses
+   & \code{\textbackslash gridskip}, \code{\textbackslash parskip} = 1 Zeile,
+     Blockplatzierung mit Rasterfang \\
+\addlinespace[3.5pt]
+I2 & Linien und Satzblöcke stehen auf der Textachse
+   & \code{\textbackslash textcolumn} als einzige Bezugsbreite; Rahmen\-elemente
+     nutzen \code{\textbackslash fullmeasure} \\
+\addlinespace[3.5pt]
+I3 & Die Marginalspalte trägt nur Beschriftung, links Glossen, rechts Ziffern
+   & \code{\textbackslash marg}, \code{\textbackslash marginlabel},
+     Tabellenlegende, Zone \code{numberzone} \\
+\addlinespace[3.5pt]
+I4 & Eine Schriftfamilie, Unterscheidung über Schnitt, Grad, Weite
+   & \code{\textbackslash setmainfont} plus \code{\textbackslash condensed} \\
+\addlinespace[3.5pt]
+I5 & Flattersatz mit Trennung und optischem Randausgleich
+   & \code{ragged2e} und \code{microtype} \\
+\addlinespace[3.5pt]
+I6 & Überschriften hängen am nachfolgenden Block
+   & \code{\textbackslash Needspace*}, Kopplung von Abschnitt und
+     Unterabschnitt, Bindung der Tabellen \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+
+\subsection{Warum das Rastermass schwierig ist}
+
+\marg{Der schwierigste Teil der Klasse steckt in \code{\textbackslash swiss@placebox}}
+Ein Block, dessen Höhe kein Vielfaches des Rastermasses ist, verschiebt allen
+folgenden Satz. Das naheliegende Aufrunden der Blockhöhe genügt nicht, weil
+TeX beim Anfügen einer Box Zeilenausgleich einsetzt, dessen Betrag von der
+Tiefe der Vorzeile abhängt, und weil beim Seitenumbruch statt dessen
+\code{\textbackslash topskip} greift.
+
+SwissTeX packt Blöcke deshalb so um, dass sie sich wie ganze Zeilen verhalten:
+Oberkante auf Struthöhe, Tiefe auf ein Vielfaches des Rastermasses aufgefüllt,
+dahinter eine unsichtbare Zeile mit Standardtiefe. Damit rechnet der normale
+Ausgleich mitten auf der Seite genauso wie am Seitenanfang, wo
+\code{\textbackslash topskip} auf eine Rasterzeile gesetzt ist.
+
+\section{Kennzahlen}
+
+\subsection{Klassenoptionen}
+
+\begin{swisstable}{Optionen und Vorgabewerte}
+\begin{tabularx}{\textcolumn}[t]{@{}S{34mm}@{\hspace{3mm}}S{22mm}@{\hspace{3mm}}L@{}}
+\toprule
+\tabhead{Option} & \tabhead{Vorgabe} & \tabhead{Wirkung} \\
+\midrule
+\code{gridunit}     & 13.5pt & Basislinienraster, Durchschuss \\
+\code{bodysize}     & 9.5pt  & Grundschriftgrad \\
+\code{paperwidth}   & 210mm  & Papierbreite \\
+\code{paperheight}  & 297mm  & Papierhöhe \\
+\code{outermargin}  & 24mm   & Steg links des Rasters \\
+\code{margincolumn} & 30mm   & Marginalspalte \\
+\code{numberzone}   & 8mm    & rechte Zone der Marginalspalte; zwei Stellen brauchen 7\,mm \\
+\code{gutter}       & 7mm    & Bund \\
+\code{textcolumn}   & 105mm  & Satzspiegel, Textachse \\
+\code{topmargin}    & 26mm   & oberer Steg \\
+\code{gridlines}    & 51     & Rasterzeilen je Seite \\
+\code{accent}       & 255,55,37 & Signalfarbe als RGB-Tripel \\
+\code{band}         & 255,105,91 & Farbe der Farbfelder \\
+\code{paper}        & 234,232,208 & Grundton der Seite \\
+\code{ink}          & 26,26,26 & Textfarbe \\
+\code{tint}         & false  & Grundton flächig anlegen \\
+\code{showgrid}     & false  & Raster sichtbar unterlegen \\
+\code{rules}        & true   & Haarlinie vor Abschnitten \\
+\code{lang}         & german & Sprache für Trennung \\
+\code{sans}         & texgyreheros & Dateibasis der Grundschrift \\
+\code{sanscondensed} & texgyreheroscn & Dateibasis der Schmalschrift \\
+\code{sansname}     & TeX Gyre Heros & Familienname für den Formelsatz \\
+\code{sansnameitalic} & TeX Gyre Heros Italic & kursiver Schnitt im Formelsatz \\
+\code{mathfont}     & TeX Gyre DejaVu Math & Mathematikschrift \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+
+Der rechte Steg wird nicht gesetzt, sondern berechnet: Papierbreite minus
+Steg, Marginalspalte, Bund und Satzspiegel. Ebenso ergibt sich die Satzhöhe
+als Rasterzeilen mal Rastermass. Damit bleibt jede Änderung konsistent.
+
+\section{Schnittstelle}
+
+\subsection{Befehle und Umgebungen}
+
+\begin{swisstable}{Öffentliche Schnittstelle}
+\begin{tabularx}{\textcolumn}[t]{@{}S{40mm}@{\hspace{3mm}}L@{}}
+\toprule
+\tabhead{Aufruf} & \tabhead{Zweck} \\
+\midrule
+\code{\textbackslash swisstitle\{K\}\{T\}\{U\}} & Titelblock aus Kennzeichnung, Titel, Untertitel \\
+\addlinespace[3.5pt]
+\code{\textbackslash setrunningtitle\{...\}} & Text des Kolumnentitels \\
+\addlinespace[3.5pt]
+\code{lead} & Vorspann, ein Grad grösser als der Grundtext \\
+\addlinespace[3.5pt]
+\code{\textbackslash marg\{...\}} & Randglosse in der Marginalspalte \\
+\addlinespace[3.5pt]
+\code{swisstable\{Legende\}} & Tabellenblock, Nummer und Legende automatisch in der Marginalspalte \\
+\addlinespace[3.5pt]
+\code{gridblock} & beliebiger Block mit Rasterfang, auch für abgesetzte Formeln \\
+\addlinespace[3.5pt]
+\code{\textbackslash snaptogrid\{...\}} & Befehlsform desselben \\
+\addlinespace[3.5pt]
+\code{\textbackslash gridskip\{n\}} & n Rasterzeilen Raum \\
+\addlinespace[3.5pt]
+\code{\textbackslash tracked\{...\}} & gesperrte Versalien für Kennzeichnungen \\
+\addlinespace[3.5pt]
+\code{\textbackslash colophon\{...\}} & Kolophon am Fuss der letzten Seite \\
+\addlinespace[3.5pt]
+\code{swissfigure\{Legende\}} & Abbildungsblock, kein Gleitobjekt \\
+\addlinespace[3.5pt]
+\code{\textbackslash swissgraphic\{Datei\}} & Bild auf Satzspiegelbreite \\
+\addlinespace[3.5pt]
+\code{\textbackslash sidenote\{...\}} & nummerierte Randnotiz statt Fussnote \\
+\addlinespace[3.5pt]
+\code{\textbackslash gridsnap} & Rasterfang nach fremden Umgebungen \\
+\addlinespace[3.5pt]
+\code{\textbackslash textcolumn}, \code{\textbackslash fullmeasure}, \code{\textbackslash gridunit} & Längen für eigene Konstruktionen \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+
+\subsection{Tabellen}
+
+Innerhalb von \code{swisstable} wird die Tabelle direkt geschrieben. Das
+\code{[t]} ist zwingend, sonst fluchtet die Legende auf die Tabellenmitte
+statt auf die Kopfzeile:
+
+\begin{gridblock}
+\code{\textbackslash begin\{swisstable\}\{Legende\}}\\
+\code{\textbackslash begin\{tabularx\}\{\textbackslash textcolumn\}[t]\{@\{\}S\{30mm\}@\{\textbackslash hspace\{4mm\}\}L@\{\}\}}\\
+\code{\hspace{1.5em}...}\\
+\code{\textbackslash end\{tabularx\}}\\
+\code{\textbackslash end\{swisstable\}}
+\end{gridblock}
+
+\marg{\code{tabularx} lässt sich nicht in eine eigene Umgebung wickeln, weil es seinen Rumpf bis zum wörtlichen Ende einliest}
+Bereitgestellt sind die Spaltentypen \code{L} (dehnbar, Flattersatz),
+\code{S\{Breite\}} (fest, Flattersatz) und \code{R\{Breite\}}
+(fest, rechtsbündig) sowie \code{\textbackslash tabhead} für die Kopfzeile.
+Senkrechte Linien sind nicht vorgesehen.
+
+\section{Fremde Umgebungen}
+
+\subsection{Automatischer Rasterfang}
+
+\marg{Der Fang muss nach dem Schlusscode der Umgebung greifen, nicht davor}
+Umgebungen aus LaTeX und aus Paketen bringen eigene Abstände mit. Für
+\code{quote}, \code{quotation}, \code{verbatim}, \code{description} und die
+abgesetzten Formelumgebungen von \code{amsmath} setzt die Klasse deshalb
+\code{\textbackslash gridsnap} automatisch dahinter. Der Fang liest
+\code{\textbackslash pagetotal}, füllt auf die nächste Rasterzeile auf und
+setzt die Tiefe für den folgenden Zeilenausgleich.
+
+Damit brauchen abgesetzte Formeln kein \code{gridblock} mehr. Für eigene
+oder fremde Umgebungen, die noch nicht erfasst sind, genügt ein Aufruf von
+\code{\textbackslash gridsnap} dahinter oder ein Eintrag über
+\code{\textbackslash gridsnapenv\{name\}}.
+
+\subsection{Listen, Fussnoten, dritte Ebene}
+
+Aufzählung, Nummerierung, verschachtelte Listen und Beschreibungslisten
+stehen auf dem Raster; die Marken sitzen auf der Textachse und hängen nicht
+in den Bund. Fussnoten laufen in der Schmalschrift, die Trennlinie steht auf
+der Textachse statt auf vierzig Prozent der Spaltenbreite. Alternativ setzt
+\code{\textbackslash sidenote} eine nummerierte Notiz in die Marginalspalte.
+Die dritte Gliederungsebene ist unnummeriert und läuft als fetter Vorspann in
+den Absatz hinein.
+
+\section{Schaugrade und Farbe}
+
+\subsection{Anzeigengrade}
+
+\marg{Auch Schaugrade bleiben am Raster: der Durchschuss ist ein Vielfaches, der Grad folgt daraus}
+\code{\textbackslash swissdisplay\{n\}} setzt einen Grad mit n Rasterzeilen
+Durchschuss. Der Schriftgrad wird daraus abgeleitet, ab drei Zeilen läuft die
+Schrift enger, wie im Schaugebrauch der Grotesk üblich.
+
+\begin{gridblock}
+{\swissdisplay{3}\bfseries Grotesk}\par
+{\swissdisplay{2}Satzspiegel}\par
+{\swissdisplay{1}Basislinienraster}
+\end{gridblock}
+
+Die Abschnittsziffer steht jetzt auf zwei Rasterzeilen in der
+Marginalspalte. Das ist das auffälligste Gliederungsmittel der Neuen
+Schweizer Schule: Ordnung über Grösse und Lage statt über zusätzliche
+Auszeichnung.
+
+\subsection{Farbfelder}
+
+Farbfelder sind Rahmensatz. Sie laufen über das volle Mass, ihre Höhe bleibt
+über dieselbe Blockplatzierung am Raster, und die Spaltenregel gilt in ihnen
+nicht.
+
+\begin{swissband}
+{\swissdisplay{2}\bfseries Kunsthalle}\par\vspace{6pt}
+\code{\textbackslash begin\{swissband\}} setzt ein Feld in der Bandfarbe mit
+weissem Satz. \code{\textbackslash swisscover} legt eine randabfallende
+Umschlagseite an, \code{tint=true} den Grundton über alle Seiten.
+\end{swissband}
+
+Die Palette ist voreingestellt auf einen warmen Grundton, ein Signalrot und
+ein etwas helleres Bandrot. Alle vier Werte lassen sich als Klassenoption
+setzen: \code{paper}, \code{accent}, \code{band}, \code{ink}.
+
+\subsection{Blindzeile über dem Farbfeld}
+
+\marg{Satzblock und Farbfläche sind zwei verschiedene Dinge und brauchen zwei verschiedene Abstände}
+Ein Satzblock beginnt mit einer Textzeile, deren Grundlinie ins Raster
+gehört; über ihr steht die Oberlänge als optischer Abstand. Eine Farbfläche
+hat keine Oberlänge, ihre Kante ist die Kante. Wird sie wie ein Satzblock
+gesetzt, stösst sie fast an die Unterlängen der Vorzeile.
+
+Müller-Brockmann legt zwischen Satz und Feld eine Blindzeile: gemessen von
+der Unterlänge der Vorzeile bis zur Feldkante, und von der Feldkante bis zur
+Oberlänge der Folgezeile. \code{\textbackslash swissbandlead} zählt diese
+Blindzeilen, voreingestellt auf eine. Ganzzahlig ist dann nicht das Feld,
+sondern das Modul aus Blindzeile, Feld und Blindzeile. Der verbleibende
+Unterschied im sichtbaren Weissraum entspricht der Differenz aus Ober- und
+Unterlänge und lässt sich mit ganzen Rasterzeilen nicht wegrechnen.
+
+\section{Prüfung}
+
+\subsection{swisscheck}
+
+Die Klasse kann Regeln nur erzwingen, solange die Schnittstelle benutzt wird.
+Handgesetzte Abstände oder ein vergessenes \code{[t]} fallen erst am Ergebnis
+auf. Das beiliegende Skript misst deshalb die fertige PDF-Datei:
+
+\begin{gridblock}
+\code{python3 swisscheck.py bericht.pdf -{}-tex bericht.tex}
+\end{gridblock}
+
+Geprüft werden Achsentreue der Linien, Rasterbindung des Grundtexts gegen die
+Satzoberkante, rechte Satzkante, Marginalspalte und Bund, Legendenflucht der
+Tabellen, Überschriften am Seitenfuss, die beiden Zonen der Marginalspalte
+sowie Zeilenanfänge ohne Einzug. Die Kennzahlen lassen sich per
+Schalter an ein abweichendes Raster anpassen.
+
+\marg{Ein häufiger Stolperstein bei eigenen Prüfungen: PDF rechnet in DTP-Punkt, TeX in TeX-Punkt}
+Wer eigene Messungen anstellt, muss zwischen TeX-Punkt und DTP-Punkt
+umrechnen. Ohne diesen Faktor erscheint jedes korrekte Raster als langsam
+wegdriftend, mit etwa 0,05\,pt je Zeile.
+
+\subsection{Grenzen}
+
+Die Rasterbindung gilt für Grundtext. Tabellen, Abbildungen und Marginalien
+laufen bewusst mit engerem Durchschuss und stehen innerhalb ihres Blocks auf
+eigenem Mass; nach aussen bleibt der Block rastertreu. Gleitobjekte sind
+nicht vorgesehen, weil sie mit einem Basislinienraster und der Marginalspalte
+schlecht zusammengehen: Abbildungen stehen dort, wo sie geschrieben sind. Der
+Fussnotenbereich steht am Seitenfuss und folgt einem eigenen Mass.
+
+\colophon{SwissTeX 1.3.0, gesetzt mit sich selbst. TeX Gyre Heros als
+Univers-Analogon, 9,5/13,5\,pt im Flattersatz. Satzspiegel 105\,mm,
+Marginalspalte 30\,mm, 51 Rasterzeilen je Seite. XeLaTeX.}
+
+\end{document}
