@@ -4,3 +4,7 @@
 *.out
 *.toc
 *.swisscheck
+fonts/.venv/
+fonts/build/
+__pycache__/
+*.pyc
