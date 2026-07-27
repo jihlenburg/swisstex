@@ -137,4 +137,12 @@ def run(steps, out_dir):
         font.save(os.path.join(out_dir, f"{out}.ttf"))
 
 if __name__ == "__main__":
-    run(sys.argv[1:] or ORDER, "fonts/build")
+    import shutil, glob as _glob
+    args = sys.argv[1:]
+    if args[:1] == ["install"]:
+        dest = os.path.expanduser("~/Library/Fonts")
+        for p in _glob.glob("fonts/dist/*.ttf"):
+            shutil.copy(p, dest)
+        print("installed to", dest)
+    else:
+        run(args or ORDER, "fonts/dist" if not args else "fonts/build")
