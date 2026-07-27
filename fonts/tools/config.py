@@ -19,3 +19,21 @@ LICENSE_NOTE = ("Modified version of URW U001, renamed per the Aladdin Free "
                 "Public License (AFPL). See Copying.AFPL.txt. Not for "
                 "commercial distribution as a font.")
 VERSION = "Version 2.000"
+
+_metrics_cache = None
+def metrics_targets():
+    """typo = Regular's source values (canonical rhythm); win = union of
+    extremes across all 8 (clipping guard). Computed once from sources."""
+    global _metrics_cache
+    if _metrics_cache is None:
+        from fontTools.ttLib import TTFont
+        fonts = [TTFont(p) for p in SOURCE_FILES]
+        reg = fonts[0]
+        _metrics_cache = dict(
+            typo_asc=reg["OS/2"].sTypoAscender,
+            typo_desc=reg["OS/2"].sTypoDescender,
+            line_gap=0,
+            win_asc=max(f["head"].yMax for f in fonts),
+            win_desc=max(-f["head"].yMin for f in fonts),
+        )
+    return _metrics_cache

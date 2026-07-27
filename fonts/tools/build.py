@@ -25,8 +25,21 @@ def step_rename(font, filename):
     n.removeNames(nameID=16)
     n.removeNames(nameID=17)
 
-STEPS = {"rename": step_rename}
-ORDER = ["rename"]          # later tasks append: metrics, italic, coverage, features
+def step_metrics(font, filename):
+    t = config.metrics_targets()
+    os2, hhea = font["OS/2"], font["hhea"]
+    os2.sTypoAscender = t["typo_asc"]
+    os2.sTypoDescender = t["typo_desc"]
+    os2.sTypoLineGap = t["line_gap"]
+    os2.usWinAscent = t["win_asc"]
+    os2.usWinDescent = t["win_desc"]
+    os2.fsSelection |= (1 << 7)          # USE_TYPO_METRICS
+    hhea.ascent = t["typo_asc"]
+    hhea.descent = t["typo_desc"]
+    hhea.lineGap = t["line_gap"]
+
+STEPS = {"rename": step_rename, "metrics": step_metrics}
+ORDER = ["rename", "metrics"]          # later tasks append: italic, coverage, features
 
 def run(steps, out_dir):
     os.makedirs(out_dir, exist_ok=True)
