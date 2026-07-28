@@ -2,6 +2,7 @@ import os, sys, math
 sys.path.insert(0, os.path.dirname(__file__))
 from fontTools.ttLib import TTFont
 from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
+from fontTools.otlLib.maxContextCalc import maxCtxFont
 import config
 
 def load(path):
@@ -25,6 +26,11 @@ def step_rename(font, filename):
     # drop stale typographic-family overrides from the sources
     n.removeNames(nameID=16)
     n.removeNames(nameID=17)
+    # fontbakery opentype/font_version (Task 9): head.fontRevision must
+    # match the nameID 5 version string above, or applications report
+    # inconsistent version numbers. Sources ship an unrelated fontRevision
+    # (~1.04999); align it to the single VERSION_NUM source of truth.
+    font["head"].fontRevision = config.VERSION_NUM
 
 def step_metrics(font, filename):
     t = config.metrics_targets()
@@ -38,6 +44,41 @@ def step_metrics(font, filename):
     hhea.ascent = t["typo_asc"]
     hhea.descent = t["typo_desc"]
     hhea.lineGap = t["line_gap"]
+    # fontbakery ttx_roundtrip (Task 9): fsSelection bits 7-9 (incl. the
+    # USE_TYPO_METRICS bit set above) are only defined from OS/2 table
+    # version 4 onward; the u001 sources ship version 1, so setting that
+    # bit against a v1 table is a real spec-compliance gap this step
+    # introduces. Bump to version 4 and populate the fields that version
+    # requires beyond v1 (ulCodePageRange1/2 already present in v1).
+    # sCapHeight/sxHeight are read straight from the untouched glyf bbox
+    # of 'H'/'x' -- verified byte-identical, for all 8 sources, to
+    # measurelib's own curve-sampled fallback (used whenever these OS/2
+    # fields are absent/zero), so introducing them cannot perturb the
+    # regression test's stem measurements. usDefaultChar/usBreakChar
+    # follow the fontTools fontBuilder convention (0 / space). usMaxContext
+    # is computed from this font's GSUB/GPOS as they stand right now; if
+    # step_features later adds liga to this same font object, it
+    # recomputes usMaxContext itself once GSUB reaches its final state.
+    os2.version = 4
+    os2.sCapHeight = font["glyf"]["H"].yMax
+    os2.sxHeight = font["glyf"]["x"].yMax
+    os2.usDefaultChar = 0
+    os2.usBreakChar = 32
+    os2.usMaxContext = maxCtxFont(font)
+    # fontbakery opentype/xavgcharwidth (Task 9, self-inflicted by the
+    # version bump above): OS/2 xAvgCharWidth's expected formula changes
+    # at version 3 from a weighted lowercase-latin average to a plain mean
+    # over every positive-width glyph in hmtx. The sources' inherited
+    # xAvgCharWidth (958, sized for the old formula) doesn't satisfy the
+    # new one once version >= 3, so recompute it the way version>=3 fonts
+    # are expected to.
+    widths = [w for w, _ in font["hmtx"].metrics.values() if w > 0]
+    os2.xAvgCharWidth = round(sum(widths) / len(widths))
+    # fontbakery opentype/family/underline_thickness (Task 9): sources
+    # vary post.underlineThickness 104/105 by style; unify on Regular's
+    # canonical value (post.underlinePosition is already uniform at -460
+    # across all 8 sources, so it's left untouched).
+    font["post"].underlineThickness = t["underline_thickness"]
 
 def step_italic(font, filename):
     if filename not in config.ITALIC_FILES:
@@ -121,6 +162,16 @@ def step_features(font, filename):
         font["GPOS"] = gpos
     if gdef is not None:
         font["GDEF"] = gdef
+    # fontbakery ttx_roundtrip / OS-2 usMaxContext (Task 9): step_metrics
+    # already sets usMaxContext from GSUB/GPOS as they stood before this
+    # step ran; recompute now that GSUB may carry the new liga lookup, so
+    # the field reflects the font's final OpenType Layout content. Guarded
+    # on OS/2 version >=2 (the field doesn't exist below that) so this is
+    # a true no-op when step_metrics hasn't run in this build (e.g. a test
+    # that calls step_features directly against a raw v1 source).
+    os2 = font.get("OS/2")
+    if os2 is not None and os2.version >= 2:
+        os2.usMaxContext = maxCtxFont(font)
 
 STEPS = {"rename": step_rename, "metrics": step_metrics, "italic": step_italic,
          "coverage": step_coverage, "features": step_features}

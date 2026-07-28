@@ -18,7 +18,8 @@ STYLE_MAP = {
 LICENSE_NOTE = ("Modified version of URW U001, renamed per the Aladdin Free "
                 "Public License (AFPL). See Copying.AFPL.txt. Not for "
                 "commercial distribution as a font.")
-VERSION = "Version 2.000"
+VERSION_NUM = 2.0
+VERSION = f"Version {VERSION_NUM:.3f}"
 
 ITALIC_ANGLE = -17.0
 ITALIC_FILES = {"u001-ita", "u001-bolita", "u001con-ita", "u001con-bolita"}
@@ -53,5 +54,6 @@ def metrics_targets():
             line_gap=0,
             win_asc=max(f["head"].yMax for f in fonts),
             win_desc=max(-f["head"].yMin for f in fonts),
+            underline_thickness=reg["post"].underlineThickness,
         )
     return _metrics_cache
