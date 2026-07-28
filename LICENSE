@@ -19,3 +19,20 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+--------------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------------
+
+The MIT license above covers the SwissTeX document class (swisstex.cls),
+the font build tools and test suite (fonts/tools/, fonts/tests/), and the
+documentation and scripts in this repository (including swisscheck.py and
+the specimen and manual sources).
+
+It does NOT cover the font files. The fonts under fonts/sources/u001/
+(the pristine URW U001 sources) and fonts/dist/ (the built SwissTeX
+Grotesk and SwissTeX Grotesk Condensed families derived from them) are
+distributed gratis under the Aladdin Free Public License (AFPL) — see
+fonts/sources/u001/Copying.AFPL.txt (also shipped as
+fonts/dist/Copying.AFPL.txt) for the full text. These font files are
+NOT MIT-licensed.

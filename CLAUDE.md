@@ -176,7 +176,11 @@ Two traps documented in the source and the manual:
 
 ## Pitfalls
 
-- The licence is MIT everywhere (`LICENSE` and the `swisstex.cls` header). Do not reintroduce LPPL.
+- Licensing is split, not uniform: MIT covers the code and documentation (`LICENSE`,
+  the `swisstex.cls` header, `fonts/tools/`, `fonts/tests/`, this file, the specimen/manual
+  sources). The font binaries under `fonts/` (`fonts/sources/u001/`, `fonts/dist/`) are
+  derived from URW U001 and are AFPL-licensed (see `fonts/sources/u001/Copying.AFPL.txt`) —
+  they are never MIT. Do not reintroduce LPPL.
 - The manual's option table (§2 "Klassenoptionen") mirrors `swisstex.cls` §1. `swisstex.cls` is the
   source of truth; update the table in the same change whenever an option or default changes.
 - If you measure a PDF yourself, convert between TeX points (1/72.27 in) and DTP points (1/72 in) —

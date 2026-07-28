@@ -23,6 +23,7 @@ def step_rename(font, filename):
     _set(n, 5, config.VERSION)
     _set(n, 6, out)
     _set(n, 13, config.LICENSE_NOTE)
+    _set(n, 14, config.LICENSE_URL)          # license info URL
     # drop stale typographic-family overrides from the sources
     n.removeNames(nameID=16)
     n.removeNames(nameID=17)
@@ -31,6 +32,47 @@ def step_rename(font, filename):
     # inconsistent version numbers. Sources ship an unrelated fontRevision
     # (~1.04999); align it to the single VERSION_NUM source of truth.
     font["head"].fontRevision = config.VERSION_NUM
+
+# name IDs stamped by the webfont-generator pipeline the u001 sources were
+# distributed through (Font Squirrel / ttfautohint), not by URW: they carry
+# no license-relevant content and are noise in the shipped fonts.
+WEBFONT_STAMP_NAME_IDS = (200, 201, 202, 203, 55555)
+MODIFICATION_NOTICE = "; modified 2026-07-28 by the SwissTeX project."
+
+def step_identity(font, filename):
+    """Frutiger closing-review fixes (identity/provenance layer):
+      - vendor ID SWTX (was URW's own, wrong once the font is modified)
+      - fsType 0 (installable embedding -- coherent with the AFPL's
+        redistribution freedoms; the sources shipped fsType 4)
+      - name ID 0 rewritten to URW's original copyright text (read from the
+        matching source font on disk, not hardcoded) plus a dated
+        modification notice -- the AFPL requires retaining the original
+        notice AND dating changes (Copying.AFPL.txt 2(c)(i))
+      - the Font-Squirrel/ttfautohint webfont-generator stamps (name IDs
+        200/201/202/203/55555, the 'webf' and 'FFTM' tables) removed: they
+        describe a webfont-packaging step this pipeline does not perform
+      - condensed styles only: usWidthClass 3 and PANOSE bProportion 6, so
+        the metadata actually says "condensed" instead of "normal"
+    """
+    fam, sub, out = config.STYLE_MAP[filename]
+    os2 = font["OS/2"]
+    os2.achVendID = "SWTX"
+    os2.fsType = 0
+
+    src_path = os.path.join(config.SRC, f"{filename}.ttf")
+    original_copyright = TTFont(src_path)["name"].getDebugName(0) or ""
+    n = font["name"]
+    _set(n, 0, original_copyright + MODIFICATION_NOTICE)
+
+    for nid in WEBFONT_STAMP_NAME_IDS:
+        n.removeNames(nameID=nid)
+    for tag in ("webf", "FFTM"):
+        if tag in font:
+            del font[tag]
+
+    if fam == config.FAMC:                    # the 4 condensed styles only
+        os2.usWidthClass = 3
+        os2.panose.bProportion = 6
 
 def step_metrics(font, filename):
     t = config.metrics_targets()
@@ -154,7 +196,13 @@ def step_features(font, filename):
     glyphs = set(font.getGlyphOrder())
     if not ({"fi", "fl"} <= glyphs):
         return
-    fea = "feature liga { sub f i by fi; sub f l by fl; } liga;\n"
+    # the source GSUB carries DFLT+latn script coverage; without declaring
+    # the same languagesystems here, feaLib would build a GSUB scoped to
+    # DFLT only, narrowing script coverage relative to the source (a
+    # regression the fontbakery/regression suite must catch).
+    fea = ("languagesystem DFLT dflt;\n"
+           "languagesystem latn dflt;\n"
+           "feature liga { sub f i by fi; sub f l by fl; } liga;\n")
     gpos = font.get("GPOS")
     gdef = font.get("GDEF")
     addOpenTypeFeaturesFromString(font, fea)
@@ -173,11 +221,14 @@ def step_features(font, filename):
     if os2 is not None and os2.version >= 2:
         os2.usMaxContext = maxCtxFont(font)
 
-STEPS = {"rename": step_rename, "metrics": step_metrics, "italic": step_italic,
-         "coverage": step_coverage, "features": step_features}
-ORDER = ["rename", "metrics", "italic", "coverage", "features"]
+STEPS = {"rename": step_rename, "identity": step_identity, "metrics": step_metrics,
+         "italic": step_italic, "coverage": step_coverage, "features": step_features}
+ORDER = ["rename", "identity", "metrics", "italic", "coverage", "features"]
 
 def run(steps, out_dir):
+    unknown = [s for s in steps if s not in STEPS]
+    if unknown:
+        raise ValueError(f"unknown step(s): {', '.join(unknown)}")
     os.makedirs(out_dir, exist_ok=True)
     for path in config.SOURCE_FILES:
         filename = os.path.splitext(os.path.basename(path))[0]
@@ -187,13 +238,26 @@ def run(steps, out_dir):
         _, _, out = config.STYLE_MAP[filename]
         font.save(os.path.join(out_dir, f"{out}.ttf"))
 
-if __name__ == "__main__":
+def install():
+    """Copy the 8 dist TTFs plus the AFPL license text to ~/Library/Fonts,
+    the macOS font directory XeTeX/CoreText resolves family names from
+    (see fonts/README.md). Verifies exactly 8 TTFs were found/copied."""
     import shutil, glob as _glob
+    dest = os.path.expanduser("~/Library/Fonts")
+    os.makedirs(dest, exist_ok=True)
+    ttfs = sorted(_glob.glob(os.path.join(config.DIST, "*.ttf")))
+    if len(ttfs) != 8:
+        raise ValueError(f"expected 8 TTFs in {config.DIST}, found {len(ttfs)}")
+    for p in ttfs + [os.path.join(config.DIST, "Copying.AFPL.txt")]:
+        shutil.copy(p, dest)
+        print("copied", p, "->", dest)
+    print("installed", len(ttfs), "TTFs to", dest)
+
+if __name__ == "__main__":
     args = sys.argv[1:]
     if args[:1] == ["install"]:
-        dest = os.path.expanduser("~/Library/Fonts")
-        for p in _glob.glob("fonts/dist/*.ttf"):
-            shutil.copy(p, dest)
-        print("installed to", dest)
+        install()
+    elif not args or args == ["all"]:
+        run(ORDER, config.DIST)
     else:
-        run(args or ORDER, "fonts/dist" if not args else "fonts/build")
+        run(args, config.BUILD)

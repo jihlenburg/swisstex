@@ -1,5 +1,13 @@
-SRC = "fonts/sources/u001"
-SOURCE_FILES = [f"{SRC}/{n}.ttf" for n in
+import os
+
+# config.py lives at fonts/tools/config.py -- the repo root is two levels up.
+# Anchoring every path here means build.py and the tests work from any CWD,
+# not just when invoked from the repo root.
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SRC = os.path.join(ROOT, "fonts", "sources", "u001")
+DIST = os.path.join(ROOT, "fonts", "dist")
+BUILD = os.path.join(ROOT, "fonts", "build")
+SOURCE_FILES = [os.path.join(SRC, f"{n}.ttf") for n in
     ["u001-reg", "u001-ita", "u001-bol", "u001-bolita",
      "u001con-reg", "u001con-ita", "u001con-bol", "u001con-bolita"]]
 
@@ -15,9 +23,10 @@ STYLE_MAP = {
     "u001con-bol":    (FAMC, "Bold",        "SwissTeXGroteskCond-Bold"),
     "u001con-bolita": (FAMC, "Bold Italic", "SwissTeXGroteskCond-BoldItalic"),
 }
-LICENSE_NOTE = ("Modified version of URW U001, renamed per the Aladdin Free "
-                "Public License (AFPL). See Copying.AFPL.txt. Not for "
-                "commercial distribution as a font.")
+LICENSE_NOTE = ("Modified from URW U001 on 2026-07-28; renamed to distinguish "
+                "it from the original. Distributed under the Aladdin Free "
+                "Public License; see Copying.AFPL.txt.")
+LICENSE_URL = "https://fontlibrary.org/en/font/u001"
 VERSION_NUM = 2.0
 VERSION = f"Version {VERSION_NUM:.3f}"
 
