@@ -78,6 +78,12 @@ Euro) — RECIPES empty; sources ship URW-authored GPOS kerning (≈970–990 pa
 Regular has 92 distinct first-glyph pair sets) — preserved by user ruling; curated kern.fea
 retired to reference.
 
+**2026-07-28 legibility-gate rulings (user, specimen-judged):** footnote/table leading frozen at
+¾\gridunit = 10.125pt (strong 3:4 ratio ships; §8.1 gate passed); the native 0.71-compression
+condensed judged too narrow at gloss sizes — a gentler ≈0.8 condensed is interpolated strictly
+within U001's own cuts (Regular↔Condensed masters, no license mixing) and ships as "SwissTeX
+Grotesk Condensed"; the native compressed cuts are not shipped.
+
 ## 4. Class extension points (`swisstex.cls`)
 
 1. **`identity=<name>` class option** loads `swissidentity-<name>.sty` after option processing,

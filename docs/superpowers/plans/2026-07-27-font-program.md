@@ -845,6 +845,95 @@ git add fonts && git commit -m "test(fonts): regression proof + fontbakery QA + 
 
 ---
 
+### Task 10: Gentler condensed by interpolation (added 2026-07-28 per legibility-gate ruling)
+
+**Files:**
+- Modify: `fonts/tools/config.py` (append `CONDENSED_T`, `CONDENSED_PAIRS`)
+- Create: `fonts/tools/interpolate.py`
+- Modify: `fonts/tools/build.py` (dist entry point routes condensed outputs through interpolation)
+- Create: `fonts/tests/test_interpolate.py`
+
+**Interfaces:**
+- Consumes: `config.SOURCE_FILES`, `config.STYLE_MAP`, the full `ORDER` pipeline.
+- Produces: `interpolate.check_compatibility(reg_font, cond_font) -> list[str]` (incompatible glyph names); `interpolate.interpolate_font(reg_font, cond_font, t) -> TTFont` (new font, glyf coords + advances linearly mixed); dist condensed TTFs whose `adv(n)` ratio vs Regular ≈ 0.80 ± 0.02.
+- Ruling context: target compression ≈0.8. With native cond at 0.71: `t = (1.0 − 0.80)/(1.0 − 0.71) ≈ 0.69` measured from the Regular master toward the Condensed master, per weight/style pair (reg→cond, ita→cond-ita, bol→cond-bol, bolita→cond-bolita). Compute t per pair from the measured adv('n') ratio rather than hardcoding 0.69: `t = (1 − target)/(1 − adv_cond/adv_reg)` with target 0.80.
+
+- [ ] **Step 1: Compatibility audit (gate for the whole task)**
+
+Write `interpolate.check_compatibility`: for every glyph in the common glyph set of a Regular/Condensed pair, decompose composites, compare contour count and per-contour point count between the two masters. Write the failing test first:
+
+```python
+# fonts/tests/test_interpolate.py
+import sys
+sys.path.insert(0, "fonts/tools")
+from fontTools.ttLib import TTFont
+import config, interpolate
+
+PAIRS = [(0, 4), (1, 5), (2, 6), (3, 7)]   # indices into SOURCE_FILES: (upright, condensed)
+
+def test_masters_compatible():
+    for r, c in PAIRS:
+        reg, cond = TTFont(config.SOURCE_FILES[r]), TTFont(config.SOURCE_FILES[c])
+        bad = interpolate.check_compatibility(reg, cond)
+        # ASCII + Latin-1 + required punctuation must interpolate; report full list
+        assert not [g for g in bad if g in interpolate.CRITICAL_GLYPHS], bad
+```
+
+`CRITICAL_GLYPHS` = A-Z, a-z, 0-9, German/FR/EN punctuation incl. the REQUIRED_CODEPOINTS glyph names. Run the audit. **If critical glyphs are incompatible, STOP: report BLOCKED with the list** — the ruling then needs re-examination (options: accept native 0.71 after all, or per-glyph fallbacks) and goes back to the user. Non-critical incompatible glyphs (rare symbols) fall back to the condensed master's outline verbatim, listed in the report.
+
+- [ ] **Step 2: Implement interpolation**
+
+```python
+# fonts/tools/interpolate.py (core; measurelib for verification)
+from fontTools.ttLib import TTFont
+from fontTools.pens.recordingPen import DecomposingRecordingPen
+
+def _points(font, gname):
+    glyf = font["glyf"]
+    g = glyf[gname]
+    coords, ends, flags = g.getCoordinates(glyf)
+    return list(coords), list(ends)
+
+def check_compatibility(reg, cond):
+    bad = []
+    common = set(reg.getGlyphOrder()) & set(cond.getGlyphOrder())
+    for gname in sorted(common):
+        try:
+            rc, re = _points(reg, gname)
+            cc, ce = _points(cond, gname)
+        except Exception:
+            bad.append(gname); continue
+        if re != ce or len(rc) != len(cc):
+            bad.append(gname)
+    return bad
+
+def interpolate_font(reg, cond, t):
+    """Return a new TTFont: cond metadata, coords/advances mixed reg→cond at t."""
+    out = TTFont(cond.reader.file.name) if cond.reader else cond
+    # implementer: load a fresh copy of the condensed master as the carrier,
+    # then overwrite glyf coordinates and hmtx advances glyph-by-glyph:
+    # new = (1-t)*reg + t*cond, rounded to int; skip incompatible glyphs.
+    ...
+```
+
+The carrier is a fresh copy of the *condensed* master (keeps its GPOS kern, GDEF, cmap, names); coordinates and advances are overwritten with the interpolation. Kerning values in the carrier's GPOS remain the condensed master's — acceptable v1 (they are, if anything, slightly tight for 0.8; note in README). Sidebearings recompute from interpolated coords (set lsb = interpolated xMin per glyph, recalc bboxes via `glyf.recalcBounds`/save round-trip).
+
+- [ ] **Step 3: Wire into dist + tests**
+
+Dist routing: for the four condensed outputs, build.py loads reg+cond masters, produces the interpolated font, then applies the normal pipeline steps (rename/metrics/italic/coverage/features) to IT instead of the raw condensed source. Tests: `adv('n')` ratio vs built Regular = 0.80 ± 0.02 per style; stems (measurelib) between the two masters' values; x-height/cap unchanged (±1 unit); all 16 existing tests still green (test_regression in Task 9 will be adjusted — see contract note).
+
+**Contract note for Task 9:** the regression test's "dist stems byte-identical to sources" clause now applies to the four UPRIGHT styles only; condensed dist styles assert against interpolation targets (adv ratio 0.80±0.02, stems strictly between master values) instead.
+
+- [ ] **Step 4: Rebuild dist, reinstall, rebuild specimens**
+
+Run the full dist build + install; rebuild specimen.pdf and legibility.pdf so the user's next look shows the interpolated condensed; swisscheck on specimen.pdf stays "bestanden".
+
+- [ ] **Step 5: Commit (local; controller pushes)**
+
+```bash
+git add fonts && git commit -m "feat(fonts): interpolated 0.8-compression condensed per legibility-gate ruling"
+```
+
 ## Self-review record
 
 - **Spec coverage (§3):** rename/link → T2; vertical metrics → T3; italicAngle → T4; coverage → T5; kern/liga/tnum-omission → T6; QA gate (fontbakery, specimen, swisscheck A2) → T7–T9; legibility gate for §8 constants → T8; license firewall + AFPL handling → T1/T5/T7 README; Bold-Italic deviation documented → T7 README. Condensed-interpolation fallback is *conditional* on the T8 user gate — if the user rules "interpolate", that becomes a follow-up task appended to this plan before Plan 2 starts.
