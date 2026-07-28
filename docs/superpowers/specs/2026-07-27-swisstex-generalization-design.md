@@ -80,9 +80,16 @@ retired to reference.
 
 **2026-07-28 legibility-gate rulings (user, specimen-judged):** footnote/table leading frozen at
 ¾\gridunit = 10.125pt (strong 3:4 ratio ships; §8.1 gate passed); the native 0.71-compression
-condensed judged too narrow at gloss sizes — a gentler ≈0.8 condensed is interpolated strictly
-within U001's own cuts (Regular↔Condensed masters, no license mixing) and ships as "SwissTeX
-Grotesk Condensed"; the native compressed cuts are not shipped.
+condensed judged too narrow at gloss sizes — initial ruling was an interpolated ≈0.8 condensed.
+
+**2026-07-28 addendum (interpolation audit):** 86/142 critical glyphs are point-incompatible
+between the Regular and Condensed masters — U001's condensed is independently redrawn, so linear
+interpolation is infeasible without inventing outlines. Superseding user ruling: **glosses and
+marginalia move to the regular-width family at annotation grade** in the identity layer (Plan 2;
+Müller-Brockmann's own book sets captions non-condensed). The native condensed cuts ship
+unchanged and remain in use for tables and the head/foot apparatus (Bold/BoldItalic condensed
+already measure ≈0.806). Audit tooling retained in `fonts/tools/interpolate.py` with a strict-xfail
+sentinel test.
 
 ## 4. Class extension points (`swisstex.cls`)
 
