@@ -19,7 +19,7 @@
 %% ---------------------------------------------------------------------
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{swisstex}[2026/07/24 v1.3.0 Swiss typographic grid]
+\ProvidesClass{swisstex}[2026/07/29 v2.0.0 Swiss typographic grid]
 
 \RequirePackage{iftex}
 \RequireXeTeX
@@ -54,6 +54,9 @@
 \DeclareStringOption[TeX Gyre Heros]{sansname}    % Familienname fuer Mathe
 \DeclareStringOption[TeX Gyre Heros Italic]{sansnameitalic}
 \DeclareStringOption[TeX Gyre DejaVu Math]{mathfont}
+\DeclareStringOption[]{annotationleading} % leer = 2/3 Rastermass
+\DeclareStringOption[]{glossleading}      % leer = 3/4 Rastermass
+\DeclareStringOption[]{footnoteleading}   % leer = 3/4 Rastermass
 \DeclareDefaultOption{\PassOptionsToClass{\CurrentOption}{article}}
 \ProcessKeyvalOptions*
 
@@ -65,6 +68,25 @@
 \RequirePackage{calc}
 
 \newlength{\gridunit}     \setlength{\gridunit}{\swiss@gridunit}
+
+% Nebenmasse: Durchschuss der Nebentexte als starke Rasterbrueche (3:2, 4:3).
+% Ueberschreibbare Kennzahlen; leere Option leitet aus dem Raster ab.
+\newlength{\annotationleading}
+\ifx\swiss@annotationleading\@empty
+  \setlength{\annotationleading}{\dimexpr2\gridunit/3\relax}
+\else\setlength{\annotationleading}{\swiss@annotationleading}\fi
+\newlength{\glossleading}
+\ifx\swiss@glossleading\@empty
+  \setlength{\glossleading}{\dimexpr3\gridunit/4\relax}
+\else\setlength{\glossleading}{\swiss@glossleading}\fi
+\newlength{\footnoteleading}
+\ifx\swiss@footnoteleading\@empty
+  \setlength{\footnoteleading}{\dimexpr3\gridunit/4\relax}
+\else\setlength{\footnoteleading}{\swiss@footnoteleading}\fi
+\typeout{swiss:annotationleading=\the\annotationleading}
+\typeout{swiss:glossleading=\the\glossleading}
+\typeout{swiss:footnoteleading=\the\footnoteleading}
+
 \newlength{\margincolumn} \setlength{\margincolumn}{\swiss@margincolumn}
 \newlength{\gutter}       \setlength{\gutter}{\swiss@gutter}
 \newlength{\numberzone}   \setlength{\numberzone}{\swiss@numberzone}
@@ -97,8 +119,10 @@
   textheight  = \swiss@textheight,
   marginparwidth = \glosswidth,
   marginparsep   = \dimexpr\gutter+\numberzone\relax,
-  headsep     = 10mm,
-  footskip    = 14mm}
+  headsep     = \dimexpr2\gridunit\relax,
+  footskip    = \dimexpr3\gridunit\relax}
+\typeout{swiss:headsep=\the\dimexpr2\gridunit\relax}
+\typeout{swiss:footskip=\the\dimexpr3\gridunit\relax}
 \reversemarginpar
 
 % ---------------------------------------------------------------------
@@ -287,8 +311,9 @@
 \fancyhead[L]{%
   \hspace*{\measureshift}%
   \makebox[0pt][l]{%
-    \condensed\fontsize{7.5}{9}\selectfont\color{quiet}%
-    \makebox[\dimexpr\margincolumn+\gutter\relax][l]{\textcolor{accent}{\thepage}}%
+    \condensed\fontsize{7.5}{\annotationleading}\selectfont\color{quiet}%
+    \makebox[\dimexpr\margincolumn+\gutter\relax][l]{%
+      {\fontsize{\swiss@bodysize}{\annotationleading}\selectfont\textcolor{accent}{\thepage}}}%
     \runningtitle}}
 \fancypagestyle{swisstitle}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}}
 
@@ -367,7 +392,7 @@
 % erste Wort des Absatzes ein. Im vertikalen Modus fiel er weg.
 \newcommand{\marg}[1]{%
   \leavevmode
-  \marginpar{\raggedright\condensed\fontsize{7.5}{10}\selectfont
+  \marginpar{\raggedright\normalfont\fontsize{7.5}{\glossleading}\selectfont
              \color{quiet}#1\par}%
   \ignorespaces}
 
@@ -375,28 +400,29 @@
 % ---------------------------------------------------------------------
 % 9a  Fussnoten
 % Trennlinie auf der Textachse statt auf 40 Prozent der Spaltenbreite,
-% Text in der Schmalschrift wie Marginalien und Tabellen.
+% Text in der Schmalschrift wie der Tabellenkoerper (Marginalien laufen seit
+% v2.0 in der Grundschrift, siehe Abschnitt 9).
 % ---------------------------------------------------------------------
 \renewcommand{\footnoterule}{%
-  \kern-3\p@{\color{hairline}\hrule\@height0.4\p@\@width\textcolumn}\kern2.6\p@}
+  \kern-.25\footnoteleading{\color{hairline}\hrule\@height0.4\p@\@width\textcolumn}\kern.2\footnoteleading}
 \renewcommand{\@makefntext}[1]{%
   \parindent\z@\noindent
   \makebox[1.4em][l]{\textcolor{accent}{\@thefnmark}}#1}
 \AtBeginDocument{%
-  \renewcommand{\footnotesize}{\condensed\fontsize{8}{12}\selectfont}}
+  \renewcommand{\footnotesize}{\condensed\fontsize{8}{\footnoteleading}\selectfont}}
 
 % Randnotiz mit Zaehler als Alternative zur Fussnote.
 \newcounter{sidenote}
 \newcommand{\sidenote}[1]{%
   \refstepcounter{sidenote}%
   \textsuperscript{\textcolor{accent}{\thesidenote}}%
-  \marginpar{\raggedright\condensed\fontsize{7.5}{10}\selectfont\color{quiet}%
+  \marginpar{\raggedright\normalfont\fontsize{7.5}{\glossleading}\selectfont\color{quiet}%
     \textcolor{accent}{\thesidenote}\hspace{0.4em}#1\par}}
 
 % ---------------------------------------------------------------------
 % 10  Titelblock und Kolophon  (Rahmenelemente, volles Mass)
 % ---------------------------------------------------------------------
-\newcommand{\tracked}[1]{{\condensed\fontsize{7.5}{9}\selectfont
+\newcommand{\tracked}[1]{{\condensed\fontsize{7.5}{\annotationleading}\selectfont
   \addfontfeature{LetterSpace=16}\MakeUppercase{#1}}}
 
 % \swisstitle{Kennzeichnung}{Titel}{Untertitel}
@@ -417,7 +443,7 @@
   \par\vfill\noindent\hspace*{\measureshift}%
   \begin{minipage}{\fullmeasure}%
     {\color{hairline}\rule{\fullmeasure}{0.4pt}}\par\vspace{6pt}
-    {\condensed\fontsize{7}{10}\selectfont\color{quiet}#1\par}%
+    {\condensed\fontsize{7}{\glossleading}\selectfont\color{quiet}#1\par}%
   \end{minipage}\par}
 
 \newenvironment{lead}
@@ -551,12 +577,12 @@
    \refstepcounter{swisstable}%
    \begin{lrbox}{\swiss@tbox}%
    \begin{minipage}[t]{\glosswidth}%
-     \raggedright\condensed\fontsize{7.5}{10}\selectfont\color{quiet}%
+     \raggedright\normalfont\fontsize{7.5}{\glossleading}\selectfont\color{quiet}%
      \textcolor{accent}{\tablecaptionprefix~\theswisstable}\\[1pt]#1%
    \end{minipage}%
    \hspace{\dimexpr\gutter+\numberzone\relax}%
    \begin{minipage}[t]{\textcolumn}%
-     \condensed\fontsize{8}{12}\selectfont}
+     \condensed\fontsize{8}{\footnoteleading}\selectfont}
   {\end{minipage}\end{lrbox}%
    \swiss@placebox{\swiss@tbox}{-\measureshift}}
 
@@ -590,7 +616,7 @@
   {\par\nopagebreak[4]\vspace{\gridunit}%
    \refstepcounter{swissfigure}%
    \sbox{\swiss@fcap}{\begin{minipage}[t]{\glosswidth}%
-     \raggedright\condensed\fontsize{7.5}{10}\selectfont\color{quiet}%
+     \raggedright\normalfont\fontsize{7.5}{\glossleading}\selectfont\color{quiet}%
      \textcolor{accent}{\figurecaptionprefix~\theswissfigure}\\[1pt]#1%
    \end{minipage}}%
    \begin{lrbox}{\swiss@fcont}%

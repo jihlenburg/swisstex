@@ -7,4 +7,5 @@
 fonts/.venv/
 fonts/build/
 __pycache__/
+tests/__pycache__/
 *.pyc

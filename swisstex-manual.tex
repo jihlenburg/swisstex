@@ -8,7 +8,7 @@
 \begin{document}
 
 \swisscover{Dokumentation}{SwissTeX}{Satzsystem nach der Neuen Schweizer Schule}
-  {Version 1.3.0 \textbar{} TeX Gyre Heros \textbar{} Raster 13,5\,pt
+  {Version 2.0.0 \textbar{} TeX Gyre Heros \textbar{} Raster 13,5\,pt
    \textbar{} Satzspiegel 105\,mm}
 
 \begin{lead}
@@ -101,6 +101,9 @@ Ausgleich mitten auf der Seite genauso wie am Seitenanfang, wo
 \code{sansname}     & TeX Gyre Heros & Familienname für den Formelsatz \\
 \code{sansnameitalic} & TeX Gyre Heros Italic & kursiver Schnitt im Formelsatz \\
 \code{mathfont}     & TeX Gyre DejaVu Math & Mathematikschrift \\
+\code{annotationleading} & leer & Durchschuss Kolumnentitel/Kennzeichnung; leer = 2/3 Rastermass \\
+\code{glossleading}      & leer & Durchschuss Glossen und Legenden; leer = 3/4 Rastermass \\
+\code{footnoteleading}   & leer & Durchschuss Fussnoten und Tabellenkörper; leer = 3/4 Rastermass \\
 \bottomrule
 \end{tabularx}
 \end{swisstable}
@@ -108,6 +111,23 @@ Ausgleich mitten auf der Seite genauso wie am Seitenanfang, wo
 Der rechte Steg wird nicht gesetzt, sondern berechnet: Papierbreite minus
 Steg, Marginalspalte, Bund und Satzspiegel. Ebenso ergibt sich die Satzhöhe
 als Rasterzeilen mal Rastermass. Damit bleibt jede Änderung konsistent.
+
+Auch der Durchschuss der Nebentexte ist seit Version 2.0 rastergebunden statt
+handgesetzt: Kolumnentitel und Kennzeichnungen laufen auf
+\code{\textbackslash annotationleading} (zwei Drittel des Rastermasses),
+Randglossen sowie die Legenden von Tabellen und Abbildungen auf
+\code{\textbackslash glossleading}, Fussnoten und Tabellenkörper auf
+\code{\textbackslash footnoteleading} (je drei Viertel) -- kommensurable
+Rasterbrüche im Verhältnis 3:2 beziehungsweise 4:3. Jede der drei Optionen
+lässt sich einzeln überschreiben; bleibt sie leer, leitet die Klasse den Wert
+aus \code{\textbackslash gridunit} ab.
+
+Mit Version 2.0 laufen Randglossen sowie die Legenden von Tabellen und
+Abbildungen in der Grundschrift statt in der Schmalschrift: Auch bei
+Müller-Brockmann selbst stand die Schmalschrift nicht für Bildlegenden,
+sondern blieb dem laufenden Tabellensatz vorbehalten. Die Klasse folgt dem
+jetzt; Tabellenkörper, Fussnoten und das Kolophon bleiben in der
+Schmalschrift.
 
 \section{Schnittstelle}
 
@@ -276,14 +296,17 @@ wegdriftend, mit etwa 0,05\,pt je Zeile.
 
 \subsection{Grenzen}
 
-Die Rasterbindung gilt für Grundtext. Tabellen, Abbildungen und Marginalien
-laufen bewusst mit engerem Durchschuss und stehen innerhalb ihres Blocks auf
-eigenem Mass; nach aussen bleibt der Block rastertreu. Gleitobjekte sind
+Die Rasterbindung gilt für Grundtext. Tabellenkörper und Fussnoten laufen
+bewusst in der Schmalschrift auf eigenem, engerem Durchschuss; Randglossen
+sowie die Legenden von Tabellen und Abbildungen laufen zwar in der
+Grundschrift, aber ebenfalls auf einem eigenen, vom Fliesstext
+unterschiedenen Durchschuss. Alle stehen innerhalb ihres Blocks auf eigenem
+Mass; nach aussen bleibt der Block rastertreu. Gleitobjekte sind
 nicht vorgesehen, weil sie mit einem Basislinienraster und der Marginalspalte
 schlecht zusammengehen: Abbildungen stehen dort, wo sie geschrieben sind. Der
 Fussnotenbereich steht am Seitenfuss und folgt einem eigenen Mass.
 
-\colophon{SwissTeX 1.3.0, gesetzt mit sich selbst. TeX Gyre Heros als
+\colophon{SwissTeX 2.0.0, gesetzt mit sich selbst. TeX Gyre Heros als
 Univers-Analogon, 9,5/13,5\,pt im Flattersatz. Satzspiegel 105\,mm,
 Marginalspalte 30\,mm, 51 Rasterzeilen je Seite. XeLaTeX.}
 
