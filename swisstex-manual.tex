@@ -142,6 +142,9 @@ Schmalschrift.
 \addlinespace[3.5pt]
 \code{\textbackslash setrunningtitle\{...\}} & Text des Kolumnentitels \\
 \addlinespace[3.5pt]
+\code{\textbackslash swisssetstrings\{...\}\{...\}} & Sprache definieren
+  oder ergänzen (Abschnitt~\ref{sec:sprachen}) \\
+\addlinespace[3.5pt]
 \code{lead} & Vorspann, ein Grad grösser als der Grundtext \\
 \addlinespace[3.5pt]
 \code{\textbackslash marg\{...\}} & Randglosse in der Marginalspalte \\
@@ -170,6 +173,36 @@ Schmalschrift.
 \bottomrule
 \end{tabularx}
 \end{swisstable}
+
+\subsection{Sprachen}
+\label{sec:sprachen}
+
+\marg{Unbekannter Schlüssel ist ein Fehler, unbekannte Sprache nur eine Warnung mit Rückfall auf Englisch}
+Alle sichtbaren Zeichenketten der Klasse -- die Präfixe von Tabellen- und
+Abbildungslegende, das Wort für ``Seite'' sowie die vier Klassifizierungsstufen
+-- laufen über eine interne, nach Sprache gegliederte Tabelle statt über fest
+verdrahtete Wörter. Ausgeliefert sind Deutsch und Englisch für die sieben
+Schlüssel \code{table}, \code{figure}, \code{page},
+\code{classification-public}, \code{classification-internal},
+\code{classification-confidential} und \code{classification-strict}; die
+Klassenoption \code{lang} wählt zwischen ihnen und steuert zugleich die
+Trennung über \code{polyglossia}.
+
+Eine weitere Sprache lässt sich mit \code{\textbackslash swisssetstrings}
+ergänzen -- in der Präambel oder in einer eigenen Identitätsdatei, die vor
+\code{\textbackslash begin\{document\}} eingebunden wird. Die Wirkung ist
+global, unabhängig von der Gruppierung an der Aufrufstelle:
+
+\begin{gridblock}
+\code{\textbackslash swisssetstrings\{french\}\{table=Tableau,
+figure=Illustration,}\\
+\code{\hspace{1.5em}page=Page, classification-public=public, ...\}}
+\end{gridblock}
+
+Fehlt für die eingestellte Sprache ein einzelner Schlüssel, fällt die Klasse
+mit einer Warnung auf die englische Zeichenkette zurück; ein Schlüssel, der
+auch dort nicht existiert, ist ein Fehler. Damit lässt sich eine Sprache auch
+schrittweise nachrüsten, ohne dass ein vergessener Schlüssel unbemerkt bliebe.
 
 \subsection{Tabellen}
 

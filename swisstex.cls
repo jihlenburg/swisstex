@@ -126,6 +126,71 @@
 \reversemarginpar
 
 % ---------------------------------------------------------------------
+% 2a  Sprachtabelle
+% Alle sichtbaren Zeichenketten laufen ueber \swiss@str{key} statt ueber
+% fest verdrahtete Woerter. Sprachen definieren sich ueber \swisssetstrings
+% (oeffentliche Schnittstelle, in Praeambel oder Identitaetsdatei nutzbar,
+% Wirkung global). Unbekannter Schluessel ist ein Fehler; unbekannte
+% Sprache faellt mit einmaliger Warnung auf english zurueck.
+%
+% \swiss@defstr@i trennt am ERSTEN Gleichheitszeichen: #1 ist als
+% getrenntes Argument angehaengt, sein Muster "=#2\@nil" liest darum nur
+% bis zum ersten "=", der Rest (bis \@nil) wird als #2 uebernommen. Werte
+% duerfen daher selbst "=" enthalten, ohne die Zerlegung zu verwirren.
+% \@for haengt beim Aufsplitten der Kommaliste jedoch ein fuehrendes
+% Leerzeichen an jeden Schluessel ausser dem ersten an (siehe Kommentar
+% bei \swiss@defstr@i); \zap@space entfernt es. Schluessel sind stets
+% leerzeichenfreie Bezeichner, darum ist das vollstaendige Entfernen aller
+% Leerzeichen dort unschaedlich -- im Wert wird nichts angetastet, damit
+% mehrwortige Werte wie "Streng vertraulich" intakt bleiben.
+\newcommand{\swisssetstrings}[2]{%
+  \begingroup
+  \@for\swiss@pair:=#2\do{%
+    \ifx\swiss@pair\@empty\else
+      \expandafter\swiss@defstr\expandafter{\swiss@pair}{#1}%
+    \fi}%
+  \endgroup}
+\def\swiss@defstr#1#2{\swiss@defstr@i#1\@nil{#2}}
+\def\swiss@defstr@i#1=#2\@nil#3{%
+  \edef\swiss@key{\zap@space#1 \@empty}%
+  \global\@namedef{swiss@str@#3@\swiss@key}{#2}}
+\DeclareRobustCommand{\swiss@str}[1]{%
+  \ifcsname swiss@str@\swiss@lang @#1\endcsname
+    \csname swiss@str@\swiss@lang @#1\endcsname
+  \else
+    \ifcsname swiss@str@english@#1\endcsname
+      \ClassWarning{swisstex}{No string `#1' for language
+        `\swiss@lang', falling back to english}%
+      \csname swiss@str@english@#1\endcsname
+    \else
+      \ClassError{swisstex}{Unknown string key `#1'}%
+        {Valid keys: table, figure, page, classification-public,
+         classification-internal, classification-confidential,
+         classification-strict. Define custom keys with
+         \string\swisssetstrings.}%
+    \fi
+  \fi}
+% Grundausstattung Deutsch/Englisch. Weitere Sprachen (siehe Handbuch)
+% werden ueber \swisssetstrings in der Praeambel oder einer eigenen
+% Identitaetsdatei nachgetragen.
+\swisssetstrings{german}{%
+  table=Tabelle,
+  figure=Abbildung,
+  page=Seite,
+  classification-public=\"Offentlich,
+  classification-internal=Intern,
+  classification-confidential=Vertraulich,
+  classification-strict=Streng vertraulich}
+\swisssetstrings{english}{%
+  table=Table,
+  figure=Figure,
+  page=Page,
+  classification-public=Public,
+  classification-internal=Internal,
+  classification-confidential=Confidential,
+  classification-strict=Strictly confidential}
+
+% ---------------------------------------------------------------------
 % 3  Schrift  (I4)
 % ---------------------------------------------------------------------
 \RequirePackage{fontspec}
@@ -566,7 +631,7 @@
 
 \newcounter{swisstable}
 \renewcommand{\theswisstable}{\arabic{swisstable}}
-\newcommand{\tablecaptionprefix}{Tabelle}
+\newcommand{\tablecaptionprefix}{\swiss@str{table}}
 
 % \begin{swisstable}{Legende}  ...  \end{swisstable}
 % Die Tabelle darin muss \begin{tabularx}{\textcolumn}[t]{...} verwenden,
@@ -602,7 +667,7 @@
 \RequirePackage{graphicx}
 \newcounter{swissfigure}
 \renewcommand{\theswissfigure}{\arabic{swissfigure}}
-\newcommand{\figurecaptionprefix}{Abbildung}
+\newcommand{\figurecaptionprefix}{\swiss@str{figure}}
 \newsavebox{\swiss@fbox}
 \newsavebox{\swiss@fcont}
 \newsavebox{\swiss@fcap}
