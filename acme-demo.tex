@@ -1,0 +1,61 @@
+\documentclass[identity=acme]{swisstex}
+
+\setrunningtitle{Acme \textbar{} Technischer Bericht}
+\hypersetup{pdftitle={Acme Demonstrationsbericht}}
+
+\swissmeta{docid=TR-2026-014, version=1.2, classification=internal}
+
+\begin{document}
+
+\swisscover*{variant=report, kicker=Technischer Bericht,
+  title=Acme Demonstrationsbericht,
+  subtitle=Referenzdokument der Identitätsschicht,
+  foot=Acme AG · acme.example}
+
+\section{Ausgangslage}
+
+Acme AG dokumentiert ihre technischen Systeme mit SwissTeX. Die
+Identitätsdatei \swisscode{swissidentity-acme.sty} bindet Farbe, Schrift,
+Logo-Dateien und Klassifizierungsvokabular einmalig an, ausschliesslich
+über die öffentlichen Setzer der Klasse; dieses Dokument selbst kennt nur
+seine eigenen Angaben aus \swisscode{\textbackslash swissmeta}.
+
+\marg{Ein kühles Rot statt des wärmeren Klassenrots}
+Der vorliegende Bericht trägt die Kennung TR-2026-014 in Version 1.2 und
+ist als intern eingestuft. Beide Angaben erscheinen automatisch im
+Seitenfuss und auf dem Umschlag, weil \swisscode{\textbackslash swissmeta}
+sie zentral hält und beide Stellen denselben Wert lesen. Die
+Klassifizierung folgt dabei dem geordneten Vokabular, das
+\swisscode{swissidentity-acme.sty} über
+\swisscode{\textbackslash swissclassifications} festlegt; ein Wert
+ausserhalb dieses Vokabulars wäre ein Fehler, kein stiller Rückfall auf
+eine Vorgabe. Ebenso liest der Umschlag dieselbe Kennung wie die
+Fusszeile, ohne dass der Dokumenttext beide Stellen einzeln pflegen
+müsste.\footnote{Die Fusszeilenvorlage der Identität kombiniert Kennung,
+Version und Datum zu einer Zeile; ein Dokument ohne eigenes
+\swisscode{\textbackslash swissmeta} zeigt an dieser Stelle nichts an.}
+
+\begin{swisstable}{Kennzahlen des Berichts}
+\begin{tabularx}{\textcolumn}[t]{@{}S{30mm}@{\hspace{4mm}}L@{}}
+\toprule
+\tabhead{Merkmal} & \tabhead{Wert} \\
+\midrule
+Kennung & TR-2026-014 \\
+\addlinespace[3.5pt]
+Version & 1.2 \\
+\addlinespace[3.5pt]
+Klassifizierung & Intern \\
+\addlinespace[3.5pt]
+Identität & acme (Referenzidentität) \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+
+Nach der Tabelle setzt der Grundtext wieder auf dem Raster auf. Logo und
+Kolophon schliessen den Bericht.
+
+\swisslogo[axis=full]{acme-logo.pdf}
+\colophon{Gesetzt mit SwissTeX und der Referenzidentität acme. Grundschrift
+SwissTeX Grotesk, 9,5/13,5\,pt im Flattersatz, Satzspiegel 105\,mm.}
+
+\end{document}

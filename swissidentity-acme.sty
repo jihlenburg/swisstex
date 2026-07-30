@@ -1,0 +1,63 @@
+% swissidentity-acme.sty
+% Referenzidentität der SwissTeX-Klasse (v2.0). "acme" ist ein neutraler
+% Platzhaltername, keine echte Firma -- diese Datei zeigt, wie eine
+% Identität sämtliche öffentlichen Setzer aus swisstex.cls Abschnitt 2b
+% benutzt, ausschliesslich über diese Setzer, nie über internes Patchen der
+% Klasse. Sie dient zugleich als Grundlage von acme-demo.tex, dem
+% Referenzdokument der Identitätsschicht (Aufgabe 8 des v2.0-Plans).
+\ProvidesPackage{swissidentity-acme}[2026/07/30 SwissTeX Referenzidentitaet acme]
+
+\swissidentitymeta{company={Acme AG}, legal={Sitz Musterstadt · HRB 12345},
+  web={acme.example}}
+
+% Farbrollen. Kein eigener band=-Wert: das Band bleibt damit = accent
+% (Abschnitt 2b, v2.0-Vorgabe seit dem Wegfall des zweiten, unmotivierten
+% Rots -- Müller-Brockmanns Regel gegen zwei Signalfarben nebeneinander).
+\swisssetcolors{accent={200,16,46}, paper={245,244,238}, ink={26,26,26}}
+
+% Schriftanbieter (I4). Ersetzt die Vorgabeschrift der Klasse vollständig:
+% \setmainfont für den Grundtext, \renewfontfamily (NICHT \newfontfamily --
+% \condensed ist bereits deklariert, siehe der Kommentar an der
+% Anbieter-Weiche in swisstex.cls Abschnitt 3) für die Schmalschrift, und
+% ein eigener \setmathfont, damit auch die Mathematik auf derselben
+% Familie steht statt stillschweigend bei der Vorgabe-Mathematik zu bleiben.
+% Diese Vollständigkeit ist die Pflicht des Anbieters, die die Klasse selbst
+% nicht erzwingt -- genau das prüft acme-demo.tex/tests/test_acme.py
+% end-to-end (nur SwissTeXGrotesk*/Cond*-Namen, kein TeX Gyre Heros, im
+% fertigen PDF).
+\newcommand{\swissidentityfonts}{%
+  \setmainfont{SwissTeX Grotesk}%
+  \renewfontfamily\condensed{SwissTeX Grotesk Condensed}%
+  \setmathfont{TeX Gyre DejaVu Math}}
+
+\swisslogofiles{cover=acme-logo.pdf, colophon=acme-logo.pdf}
+
+\swissclassifications{public,internal,confidential,strict}
+
+\swissfootformat{\meta{docid} · \meta{version} · \meta{date}}
+
+% Umschlagvariante "report": Vorgabeband (Zeile 38, neun Zeilen hoch) und
+% Zeichen-Grundlinie auf Zeile 30, falls ein Dokument glyph= setzt. Nur
+% deklariert, hier nicht angewendet -- ein Dokument ruft
+% \swisscover*{variant=report, ...} selbst auf (siehe acme-demo.tex).
+%
+% BEFUND (Task 8, nicht in swisstex.cls behoben -- siehe task-8-report.md):
+% \swisscovervariant wird in swisstex.cls erst in Abschnitt 10a definiert
+% (\newcommand an Zeile ~1026), die Identitaetsdatei laedt aber bereits in
+% Abschnitt 2b (\IfFileExists-Weiche an Zeile ~323), lange VOR dieser
+% Definition -- ein direkter Aufruf von \swisscovervariant an dieser Stelle
+% im Dateikoerper trifft auf eine zu diesem Zeitpunkt schlicht undefinierte
+% Kontrollsequenz ("Undefined control sequence \swisscovervariant"),
+% empirisch reproduziert. Das widerspricht sowohl der Spezifikationsskizze
+% (2026-07-27-swisstex-generalization-design.md, Abschnitt 5) als auch
+% diesem Task selbst, die beide genau diesen Aufruf so im Dateikoerper
+% einer Identitaetsdatei zeigen. Es ist ein Ordnungsfehler in swisstex.cls
+% selbst (die Definition muesste vor die Identitaetsladung ruecken, oder
+% die Identitaetsladung hinter Abschnitt 10a) -- keine Klassenaenderung ist
+% Teil dieses Tasks, darum hier stattdessen ueber \AtBeginDocument
+% verzoegert: derselbe oeffentliche Setzer, nur zu einem Zeitpunkt
+% aufgerufen, an dem swisstex.cls (und damit \swisscovervariant selbst)
+% bereits vollstaendig geladen ist -- kein internes Patchen der Klasse,
+% keine \swiss@-Interna beruehrt, nur eine Standard-LaTeX-Verzoegerung
+% desselben oeffentlichen Aufrufs.
+\AtBeginDocument{\swisscovervariant{report}{band=38/9, glyphline=30}}
