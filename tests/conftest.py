@@ -1,5 +1,6 @@
 import subprocess, re, os
 from pathlib import Path
+import pytest
 ROOT = Path(__file__).resolve().parent.parent
 PY = ROOT / "fonts/.venv/bin/python"
 
@@ -36,3 +37,17 @@ def swisscheck(pdf, *args):
     r = subprocess.run([str(PY), str(ROOT / "swisscheck.py"), str(pdf), *args],
                        cwd=ROOT, capture_output=True, text=True, timeout=120)
     return r.returncode, r.stdout + r.stderr
+
+@pytest.fixture(scope="session")
+def logo_pdf(tmp_path_factory):
+    # Task 6: a tiny standalone one-rect PDF used as a stand-in logo file by
+    # the \swisslogo tests. Session-scoped (built once, xelatex is slow) into
+    # a tmp_path_factory dir rather than the per-test tmp_path.
+    outdir = tmp_path_factory.mktemp("logo")
+    src = ROOT / "tests/fixtures/mklogo.tex"
+    r = subprocess.run(
+        ["xelatex", "-interaction=nonstopmode", f"-output-directory={outdir}", str(src)],
+        cwd=ROOT, capture_output=True, text=True, timeout=120)
+    pdf = outdir / "mklogo.pdf"
+    assert r.returncode == 0 and pdf.exists(), r.stdout + r.stderr
+    return pdf

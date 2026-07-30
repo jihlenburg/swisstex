@@ -725,24 +725,98 @@
     \textcolor{accent}{\thesidenote}\hspace{0.4em}#1\par}}
 
 % ---------------------------------------------------------------------
+% 9b  Logo als Satzblock
+% \swisslogo[lines=n, axis=text|full]{Datei} setzt eine Bilddatei mit einer
+% festen Hoehe von n Rasterzeilen ueber dieselbe Blockplatzierung wie Titel,
+% Farbfelder und Abbildungen (\swiss@placebox, Abschnitt 5a). axis=text haelt
+% die linke Kante auf der Textachse (Vorgabe, I2); axis=full bricht wie ein
+% Rahmenelement auf das volle Mass aus (I2-Ausnahme, dasselbe Mass wie
+% \swisstitle und \swissband). graphicx ist bereits durch die Klasse geladen
+% (Abschnitt 11a); ein zweites \RequirePackage waere unschaedlich, aber
+% ueberfluessig, da \includegraphics erst beim AUFRUF von \swisslogo im
+% Dokument gebraucht wird, nicht bei dessen Definition hier.
+%
+% Eine fehlende Datei bricht VOR dem \sbox/\includegraphics-Aufruf ab, damit
+% die Fehlermeldung den gesuchten Dateinamen selbst nennt statt einer
+% graphicx-eigenen Meldung ohne Dateibezug.
+% ---------------------------------------------------------------------
+\RequirePackage{ifthen}
+\define@key{swisslg}{lines}{\def\swiss@lg@lines{#1}}
+\define@key{swisslg}{axis}{\def\swiss@lg@axis{#1}}
+\newcommand{\swisslogo}[2][]{%
+  \def\swiss@lg@lines{2}\def\swiss@lg@axis{text}%
+  \setkeys{swisslg}{#1}%
+  \ifthenelse{\equal{\swiss@lg@axis}{text}\OR\equal{\swiss@lg@axis}{full}}{}%
+    {\ClassError{swisstex}{Unknown axis '\swiss@lg@axis' for
+       \string\swisslogo}%
+       {Valid values: text, full.}}%
+  \IfFileExists{#2}{}%
+    {\ClassError{swisstex}{Logo file '#2' not found}%
+       {Check the path passed to \string\swisslogo.}}%
+  \par\sbox{\swiss@gbox}{\includegraphics[height=\dimexpr\swiss@lg@lines\gridunit\relax]{#2}}%
+  \ifthenelse{\equal{\swiss@lg@axis}{full}}%
+    {\swiss@placebox{\swiss@gbox}{-\measureshift}}%
+    {\swiss@placebox{\swiss@gbox}{\z@}}}
+
+% ---------------------------------------------------------------------
 % 10  Titelblock und Kolophon  (Rahmenelemente, volles Mass)
 % ---------------------------------------------------------------------
 \newcommand{\tracked}[1]{{\condensed\fontsize{7.5}{\annotationleading}\selectfont
   \addfontfeature{LetterSpace=16}\MakeUppercase{#1}}}
 
-% \swisstitle{Kennzeichnung}{Titel}{Untertitel}
-\newcommand{\swisstitle}[3]{%
+% \swisstitle{Kennzeichnung}{Titel}{Untertitel} -- klassische Positionsform.
+% \swisstitle*{kicker=..., title=..., subtitle=...} -- Slot-Form (seit 2.0):
+% leere Slots lassen ihren eigenen Abstand entfallen, statt einen leeren
+% Block zu reservieren. Beide Formen laufen durch DENSELBEN Kern
+% \swiss@titlebody, der ausschliesslich \swiss@tt@k/\swiss@tt@t/\swiss@tt@s
+% liest -- Positions- und Slot-Form koennen darum nicht auseinanderlaufen,
+% weil es nur einen Renderpfad statt zweier parallel zu pflegender Koerper
+% gibt. Dispatch ueber \@ifstar statt des in der Aufgabenskizze vorgesehenen
+% suffix-Pakets: suffix.sty ist in dieser TeX-Distribution nicht installiert
+% (kpsewhich findet es nicht); \@ifstar erfuellt denselben Zweck und ist
+% bereits das Muster der Klasse selbst fuer \section (Abschnitt 8).
+%
+% Der Abstand nach der Kennzeichnung und vor dem Untertitel laeuft auf einer
+% HALBEN Rasterzeile (\gridunit/2). Das verletzt I1 nicht: die Titelbox wird
+% als Ganzes ueber \swiss@placebox auf ganze Rasterzeilen aufgefuellt
+% (Abschnitt 5a), nur die SUMME zaehlt nach aussen, nicht jeder
+% Einzelabstand innerhalb des Blocks. Zwei halbe Zeilen sind zudem selbst
+% wieder ein kommensurabler Rasterbruch (Modul aus zwei Halbzeilen = eine
+% Zeile) -- dieselbe Rechtfertigung wie die Blindzeile ueber dem Farbfeld
+% (Abschnitt 10a), die ebenfalls innerhalb eines auf ganze Zeilen
+% aufgefuellten Blocks mit einem Halbzeilenmass rechnet.
+\newcommand{\swiss@titlebody}{%
   \thispagestyle{swisstitle}%
   \par\sbox{\swiss@gbox}{%
     \begin{minipage}{\fullmeasure}%
-      \tracked{#1}\par\vspace{6pt}
-      {\fontsize{21}{23}\selectfont #2\par}%
-      \vspace{9pt}
-      {\fontsize{10.5}{\gridunit}\selectfont\color{quiet}#3\par}%
-      \vspace{\gridunit}
+      \ifx\swiss@tt@k\@empty\else
+        \tracked{\swiss@tt@k}\par\vspace{\dimexpr\gridunit/2\relax}%
+      \fi
+      \ifx\swiss@tt@t\@empty\else
+        {\swissdisplay{2}\swiss@tt@t\par}%
+      \fi
+      \ifx\swiss@tt@s\@empty\else
+        \vspace{\dimexpr\gridunit/2\relax}%
+        {\fontsize{10.5}{\gridunit}\selectfont\color{quiet}\swiss@tt@s\par}%
+      \fi
+      \vspace{\gridunit}%
       {\color{black}\hrule height 1.2pt}%
     \end{minipage}}%
   \swiss@placebox{\swiss@gbox}{-\measureshift}}
+
+\newcommand{\swiss@titleargs}[3]{%
+  \def\swiss@tt@k{#1}\def\swiss@tt@t{#2}\def\swiss@tt@s{#3}%
+  \swiss@titlebody}
+
+\define@key{swisstt}{kicker}{\def\swiss@tt@k{#1}}
+\define@key{swisstt}{title}{\def\swiss@tt@t{#1}}
+\define@key{swisstt}{subtitle}{\def\swiss@tt@s{#1}}
+\newcommand{\swiss@titleslots}[1]{%
+  \def\swiss@tt@k{}\def\swiss@tt@t{}\def\swiss@tt@s{}%
+  \setkeys{swisstt}{#1}%
+  \swiss@titlebody}
+
+\newcommand{\swisstitle}{\@ifstar{\swiss@titleslots}{\swiss@titleargs}}
 
 \newcommand{\colophon}[1]{%
   \par\vfill\noindent\hspace*{\measureshift}%

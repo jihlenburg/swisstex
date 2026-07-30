@@ -146,12 +146,28 @@ Aufruf entscheidet.
 
 \subsection{Befehle und Umgebungen}
 
+\marg{Die Positionsform \code{\textbackslash swisstitle\{K\}\{T\}\{U\}} gilt ab Version 2.1 als veraltet; die Slot-Form \code{\textbackslash swisstitle*} ist ihr Ersatz}
+Seit Version 2.0 steht neben der klassischen Positionsform von
+\code{\textbackslash swisstitle} eine Slot-Form mit Schlüssel-Wert-Syntax,
+\code{\textbackslash swisstitle*\{kicker=..., title=..., subtitle=...\}}.
+Beide Formen laufen durch denselben Satzkörper und erzeugen darum
+identische Titelblöcke; ein leerer oder fehlender Slot lässt seinen eigenen
+Abstand entfallen, statt einen leeren Block zu reservieren -- die
+Positionsform kennt dasselbe Verhalten für ein leeres Argument
+(\code{\{\}}). Die Positionsform bleibt in Version 2.0 unverändert nutzbar,
+gilt aber ab Version 2.1 als veraltet; neue Dokumente sollten die Slot-Form
+verwenden.
+
 \begin{swisstable}{Öffentliche Schnittstelle}
 \begin{tabularx}{\textcolumn}[t]{@{}S{40mm}@{\hspace{3mm}}L@{}}
 \toprule
 \tabhead{Aufruf} & \tabhead{Zweck} \\
 \midrule
-\code{\textbackslash swisstitle\{K\}\{T\}\{U\}} & Titelblock aus Kennzeichnung, Titel, Untertitel \\
+\code{\textbackslash swisstitle\{K\}\{T\}\{U\}} & Titelblock aus Kennzeichnung, Titel, Untertitel (Positionsform, ab 2.1 veraltet) \\
+\addlinespace[3.5pt]
+\code{\textbackslash swisstitle*\{kicker=..., title=..., subtitle=...\}} & derselbe Titelblock als Slot-Form; leere Slots ohne reservierten Abstand \\
+\addlinespace[3.5pt]
+\code{\textbackslash swisslogo[lines=n, axis=text|full]\{Datei\}} & Logo als Satzblock, feste Höhe in Rasterzeilen, linke Kante auf Textachse oder vollem Mass \\
 \addlinespace[3.5pt]
 \code{\textbackslash setrunningtitle\{...\}} & Text des Kolumnentitels \\
 \addlinespace[3.5pt]
