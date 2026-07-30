@@ -606,6 +606,20 @@
     \makebox[\dimexpr\margincolumn+\gutter\relax][l]{%
       {\fontsize{\swiss@bodysize}{\annotationleading}\selectfont\textcolor{accent}{\thepage}}}%
     \runningtitle}}
+\fancyfoot[L]{%
+  \hspace*{\measureshift}%
+  \makebox[0pt][l]{%
+    \condensed\fontsize{7.5}{\annotationleading}\selectfont
+    \makebox[\dimexpr\margincolumn+\gutter\relax][l]{%
+      \ifnum\swiss@classlevel>0
+        \begingroup
+        \edef\swiss@classtext{\swiss@str{classification-\swiss@meta@classification}}%
+        \textcolor{accent}{\tracked{\swiss@classtext}}%
+        \endgroup
+      \fi}%
+    \color{quiet}%
+    \ifx\swiss@footformat\@empty\else
+      {\let\meta\swiss@meta\swiss@footformat}\fi}}
 \fancypagestyle{swisstitle}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}}
 
 % ---------------------------------------------------------------------
