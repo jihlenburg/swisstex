@@ -315,10 +315,34 @@
     \fi
   \fi}
 
+% \swisscovervariant{name}{Vorgaben}: hinterlegt eine Schluessel-Wert-Liste
+% unter \swiss@cvar@name (global, wie jeder andere Identitaets-Setzer in
+% diesem Abschnitt). Die ANWENDUNG der Liste beim Aufbau des Umschlags
+% steht bei \swisscoverslots in Abschnitt 10a; hier nur die Registrierung.
+%
+% MUSS vor der Identitaetsladung stehen (naechster Block), nicht erst in
+% Abschnitt 10a bei den uebrigen Umschlag-Bausteinen: \RequirePackage laedt
+% eine Identitaetsdatei INLINE an ihrer Aufrufstelle, also mitten im
+% linearen Durchlauf dieser Klassendatei -- jeder Setzer, den eine
+% Identitaetsdatei direkt in ihrem Dateikoerper aufruft, muss daher bereits
+% VOR diesem Punkt definiert sein. Bis Fix Round 1 (Task 8) stand
+% \swisscovervariant erst in Abschnitt 10a, weit hinter diesem Block; eine
+% Identitaetsdatei, die \swisscovervariant{...}{...} direkt in ihrem
+% Dateikoerper aufruft, traf dort auf eine schlicht undefinierte
+% Kontrollsequenz (empirisch reproduziert: swissidentity-acme.sty, siehe
+% Task-8-Bericht). Der Befehl selbst braucht nichts aus den spaeteren
+% Abschnitten -- er legt nur eine Zeichenkette unter einem aus dem Namen
+% gebildeten \csname ab, ohne jede Umschlag-Maschinerie zu beruehren -- und
+% laesst sich darum gefahrlos hierher vorziehen.
+\newcommand{\swisscovervariant}[2]{\expandafter\gdef\csname swiss@cvar@#1\endcsname{#2}}
+
 % Identitaet laden: nach den Optionen und der Sprachtabelle, VOR Schrift
 % (Abschnitt 3) und Farbe (Abschnitt 4) -- beide Abschnitte lesen Werte
 % (\swiss@accent, \swiss@bandvalue, \swissidentityfonts, ...), die eine
-% Identitaetsdatei an dieser Stelle gerade erst setzt.
+% Identitaetsdatei an dieser Stelle gerade erst setzt. \swisscovervariant
+% (oben) ist aus demselben Grund vorgezogen: sie ist ein Setzer, den eine
+% Identitaetsdatei ebenfalls direkt in ihrem Dateikoerper aufrufen koennen
+% muss, nicht erst nach dessen Ende.
 \ifx\swiss@identity\@empty\else
   \IfFileExists{swissidentity-\swiss@identity.sty}%
     {\RequirePackage{swissidentity-\swiss@identity}}%
@@ -1018,13 +1042,17 @@
     and has no effect; use the glyphlines= key on \string\swisscover*
     instead (size in grid lines)}}
 
-% Variantenregister: legt nur die Vorgaben ab (Schluessel-Wert-Text,
-% unausgewertet), wendet nichts an. \gdef-artig global wie jeder andere
-% Identitaets-Setzer (Abschnitt 2b) -- eine Variante kann aus einer
-% Identitaetsdatei ODER aus der Praeambel heraus registriert werden, in
-% beiden Faellen unabhaengig vom Aufrufort wirksam.
-\newcommand{\swisscovervariant}[2]{\expandafter\gdef\csname swiss@cvar@#1\endcsname{#2}}
-
+% Variantenregister: \swisscovervariant selbst steht seit Fix Round 1
+% (Task 8) in Abschnitt 2b, VOR der Identitaetsladung -- eine
+% Identitaetsdatei kann den Setzer sonst nicht direkt in ihrem
+% Dateikoerper aufrufen, siehe der dortige Kommentar. Er legt nur die
+% Vorgaben ab (Schluessel-Wert-Text, unausgewertet), wendet nichts an;
+% \gdef-artig global wie jeder andere Identitaets-Setzer, aus einer
+% Identitaetsdatei ODER aus der Praeambel heraus registrierbar, in beiden
+% Faellen unabhaengig vom Aufrufort wirksam. Die ANWENDUNG der Liste bleibt
+% hier: \swisscoverslots (unten) sucht \swiss@cvar@<name> und wendet die
+% gespeicherte Liste ueber die Familie "swisscv" an.
+%
 % -- Schluesselfamilien --------------------------------------------------
 \define@key{swisscv}{kicker}{\def\swiss@cv@kicker{#1}}
 \define@key{swisscv}{title}{\def\swiss@cv@title{#1}}
