@@ -226,6 +226,22 @@
 % Ganzen ersetzen, indem sie \swissidentityfonts VOR diesem Punkt
 % definiert (siehe Task 4). Keine Mischung -- der Anbieter ersetzt den
 % Block vollstaendig, statt einzelne Zeilen zu ueberschreiben.
+%
+% Pflicht des Anbieters, NICHT automatisch durchgesetzt: definiert eine
+% Identitaetsdatei \swissidentityfonts, MUSS sie darin neben \setmainfont
+% auch \renewfontfamily\condensed{...} aufrufen (die Familie ist oben
+% bereits deklariert, siehe Kommentar dort) -- sonst bleibt \condensed
+% stillschweigend bei der Vorgabeschrift (Heros Condensed) haengen, waehrend
+% \setmainfont die Grundschrift laengst ersetzt hat: eine unbemerkte
+% Mischung zweier Familien, genau der I4-Verstoss, den diese Klasse
+% eigentlich ausschliesst. Diese Weiche prueft nur, OB \swissidentityfonts
+% definiert ist, nicht, ob es vollstaendig ist -- eine unvollstaendige
+% Identitaet baut anstandslos, ohne Fehler oder Warnung. Ersetzt die
+% Identitaet auch die Mathematik, gilt dieselbe Pflicht fuer einen eigenen
+% \setmathfont-Aufruf, sonst bleibt die Vorgabe-Mathematik
+% (\swiss@mathfont) aktiv. Die durchgehende Pruefung dieser Vollstaendigkeit
+% ist nicht Teil dieses Tasks -- sie kommt mit dem acme-Identitaetstest
+% (Task 8) und swisscheck A16 (Task 9).
 \newcommand{\swiss@defaultfonts}{%
   \setmainfont{\swiss@sans}[
     Extension = .otf, UprightFont = *-regular, ItalicFont = *-italic,
@@ -235,17 +251,28 @@
   \setmathfont[range=\mathit]{\swiss@sansnameitalic}}
 
 % Die Weiche selbst laeuft bei \AtBeginDocument statt sofort: fontspec
-% traegt \setmainfont/\newfontfamily an dieser Stelle zuverlaessig mit,
-% und erst am Beginndokument-Punkt steht sicher fest, ob eine
-% Identitaetsdatei \swissidentityfonts definiert hat (sie wird zwischen
-% \documentclass und \begin{document} eingebunden). Die Registrierung
-% steht bewusst HIER in Abschnitt 3, VOR den \AtBeginDocument-Bloecken
-% aus Abschnitt 4 (\color{ink}) und Abschnitt 5 (\fontsize...\selectfont
-% fuer den Grundtext): \AtBeginDocument haengt seine Bloecke der Reihe
-% nach an (siehe LaTeX-Kern, \g@addto@macro), sie laufen also in der
-% Registrierreihenfolge. Liefe die Schriftweiche spaeter, waere beim
-% \selectfont des Grundtexts noch keine Schrift geladen, und der
-% Grundtext griffe auf die vorherige (Latin-Modern-)Vorgabe zurueck.
+% traegt \setmainfont an dieser Stelle zuverlaessig mit, und erst am
+% Beginndokument-Punkt steht sicher fest, ob eine Identitaetsdatei
+% \swissidentityfonts definiert hat (sie wird zwischen \documentclass und
+% \begin{document} eingebunden). Die Registrierung steht bewusst HIER in
+% Abschnitt 3, VOR den \AtBeginDocument-Bloecken aus Abschnitt 4
+% (\color{ink}) und Abschnitt 5 (\fontsize...\selectfont fuer den
+% Grundtext). Auf diesem TeX-Live-Kern (2026) ist \AtBeginDocument selbst
+% ueber das generische Hook-System des LaTeX2e-Kerns definiert:
+% \DeclareRobustCommand\AtBeginDocument{\AddToHook{begindocument}} (siehe
+% latex.ltx). Ohne eigene Prioritaet fuegt \AddToHook seinen Code in
+% Deklarationsreihenfolge an; mehrere \AtBeginDocument-Aufrufe laufen also
+% in der Reihenfolge, in der sie im Quelltext registriert wurden -- genau
+% wie zuvor beim aelteren \g@addto@macro-Mechanismus. Empirisch bestaetigt,
+% nicht nur aus der Kern-Definition geschlossen: drei
+% \AtBeginDocument{\typeout{...}}-Marken in aufsteigender Deklarations-
+% reihenfolge erscheinen im Log exakt in dieser Reihenfolge (Scratch-Test),
+% und tests/test_fonts.py::test_provider_override sowie
+% tests/test_doctrine.py::test_fixture_passes_swisscheck bauen beide
+% erfolgreich mit der erwarteten Schrift. Liefe die Schriftweiche spaeter
+% als Abschnitt 5, waere beim \selectfont des Grundtexts noch keine Schrift
+% geladen, und der Grundtext griffe auf die vorherige
+% (Latin-Modern-)Vorgabe zurueck.
 \AtBeginDocument{%
   \ifcsname swissidentityfonts\endcsname\swissidentityfonts
   \else\swiss@defaultfonts\fi}

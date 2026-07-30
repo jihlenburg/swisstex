@@ -17,4 +17,5 @@ def test_swisscode_no_latin_modern(tmp_path):
     fx.write_text(r"""\documentclass{swisstex}
 \begin{document}Vorher \swisscode{gridunit=13.5pt} nachher.\end{document}""")
     r = build_doc(fx, tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
     assert not any("LMMono" in x or "LMRoman" in x for x in _fonts(r.pdf))
