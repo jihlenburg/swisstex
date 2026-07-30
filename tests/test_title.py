@@ -37,8 +37,14 @@ def test_missing_logo_errors(tmp_path):
 \end{document}
 """)
     r = build_doc(fx, tmp_path)
-    assert r.returncode != 0
-    assert "logo" in r.log.lower()
+    assert r.returncode != 0, r.log[-2000:]
+    assert "logo" in r.log.lower(), r.log[-2000:]
+    # Covering test for the fix-round-1 cascade bug: the \sbox/\includegraphics
+    # block must not run on the missing-file path at all, or the intended
+    # \ClassError is just the first of a graphicx-internal error cascade
+    # ("Unable to load picture", "Division by 0") from trying to measure a
+    # file that was never there.
+    assert "Division by 0" not in r.log, r.log[-2000:]
 
 def test_title_grid(tmp_path, logo_pdf):
     fx = _inject_logo(tmp_path, logo_pdf)
@@ -57,8 +63,8 @@ def test_invalid_axis_errors(tmp_path):
 \end{document}
 """)
     r = build_doc(fx, tmp_path)
-    assert r.returncode != 0
-    assert "axis" in r.log.lower()
+    assert r.returncode != 0, r.log[-2000:]
+    assert "axis" in r.log.lower(), r.log[-2000:]
 
 # --- axis=text vs axis=full: left edge really moves -------------------------
 

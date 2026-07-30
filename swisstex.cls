@@ -736,9 +736,10 @@
 % ueberfluessig, da \includegraphics erst beim AUFRUF von \swisslogo im
 % Dokument gebraucht wird, nicht bei dessen Definition hier.
 %
-% Eine fehlende Datei bricht VOR dem \sbox/\includegraphics-Aufruf ab, damit
-% die Fehlermeldung den gesuchten Dateinamen selbst nennt statt einer
-% graphicx-eigenen Meldung ohne Dateibezug.
+% Eine fehlende Datei wird VOR jedem \sbox/\includegraphics-Zugriff geprueft
+% (\IfFileExists), damit die Fehlermeldung den gesuchten Dateinamen selbst
+% nennt statt einer graphicx-eigenen Meldung ohne Dateibezug -- und damit
+% NUR diese eine Meldung erscheint (siehe Kommentar am \IfFileExists unten).
 % ---------------------------------------------------------------------
 \RequirePackage{ifthen}
 \define@key{swisslg}{lines}{\def\swiss@lg@lines{#1}}
@@ -750,13 +751,19 @@
     {\ClassError{swisstex}{Unknown axis '\swiss@lg@axis' for
        \string\swisslogo}%
        {Valid values: text, full.}}%
-  \IfFileExists{#2}{}%
+  % Der komplette Satzblock (\sbox/\includegraphics/\swiss@placebox) steht
+  % im WAHR-Zweig von \IfFileExists, nicht danach: sonst liefe er auch bei
+  % einer fehlenden Datei weiter und der \ClassError waere nur der ERSTE
+  % einer Kaskade aus graphicx-eigenen Fehlern ("Unable to load picture",
+  % "Division by 0"), weil \includegraphics dann versucht, eine
+  % nichtexistente Datei zu vermessen.
+  \IfFileExists{#2}%
+    {\par\sbox{\swiss@gbox}{\includegraphics[height=\dimexpr\swiss@lg@lines\gridunit\relax]{#2}}%
+     \ifthenelse{\equal{\swiss@lg@axis}{full}}%
+       {\swiss@placebox{\swiss@gbox}{-\measureshift}}%
+       {\swiss@placebox{\swiss@gbox}{\z@}}}%
     {\ClassError{swisstex}{Logo file '#2' not found}%
-       {Check the path passed to \string\swisslogo.}}%
-  \par\sbox{\swiss@gbox}{\includegraphics[height=\dimexpr\swiss@lg@lines\gridunit\relax]{#2}}%
-  \ifthenelse{\equal{\swiss@lg@axis}{full}}%
-    {\swiss@placebox{\swiss@gbox}{-\measureshift}}%
-    {\swiss@placebox{\swiss@gbox}{\z@}}}
+       {Check the path passed to \string\swisslogo.}}}
 
 % ---------------------------------------------------------------------
 % 10  Titelblock und Kolophon  (Rahmenelemente, volles Mass)
@@ -779,12 +786,13 @@
 % Der Abstand nach der Kennzeichnung und vor dem Untertitel laeuft auf einer
 % HALBEN Rasterzeile (\gridunit/2). Das verletzt I1 nicht: die Titelbox wird
 % als Ganzes ueber \swiss@placebox auf ganze Rasterzeilen aufgefuellt
-% (Abschnitt 5a), nur die SUMME zaehlt nach aussen, nicht jeder
-% Einzelabstand innerhalb des Blocks. Zwei halbe Zeilen sind zudem selbst
-% wieder ein kommensurabler Rasterbruch (Modul aus zwei Halbzeilen = eine
-% Zeile) -- dieselbe Rechtfertigung wie die Blindzeile ueber dem Farbfeld
-% (Abschnitt 10a), die ebenfalls innerhalb eines auf ganze Zeilen
-% aufgefuellten Blocks mit einem Halbzeilenmass rechnet.
+% (Abschnitt 5a) -- nur die GESAMThoehe des Blocks zaehlt nach aussen, ein
+% Innenabstand veraendert lediglich, WIEVIEL \swiss@placebox am Blockende
+% noch auffuellen muss. Das Argument braucht dafuer keine Paarung zweier
+% Halbzeilen zu einer vollen Zeile: es gilt unveraendert, wenn nur EINE der
+% beiden Halbzeilen ueberhaupt vorkommt (z. B. Kennzeichnung ohne
+% Untertitel, also nur ein einzelner halber Rasterzeilenabstand statt
+% zweier) -- die Rundung am Blockende faengt den Rest so oder so auf.
 \newcommand{\swiss@titlebody}{%
   \thispagestyle{swisstitle}%
   \par\sbox{\swiss@gbox}{%
