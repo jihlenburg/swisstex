@@ -16,5 +16,9 @@ def test_public_prints_nothing(tmp_path):
     r = build_doc(fx, tmp_path)
     with pdfplumber.open(r.pdf) as p:
         page = p.pages[0]
-        foot = " ".join(w["text"] for w in page.extract_words() if w["top"] > page.height - 60)
-    assert "ffentlich" not in foot and "Public" not in foot
+        foot = [w["text"] for w in page.extract_words() if w["top"] > page.height - 60]
+    # Classification mark must not appear for public classification
+    foot_text = " ".join(foot)
+    assert "ffentlich" not in foot_text and "Public" not in foot_text
+    # But metadata line must still render
+    assert any("D-77" in w for w in foot), foot
