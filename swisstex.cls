@@ -889,48 +889,352 @@
          \hbox{\usebox{\swiss@bbox}}\vfil}}}}}%
    \swiss@placebox{\swiss@gbox}{-\measureshift}}
 
-% \swisscover{Kennzeichnung}{Titel}{Untertitel}{Fusszeile}
-% Randabfallende Umschlagseite. Der Titel laeuft auf vier Rasterzeilen
-% Durchschuss, das Farbfeld sitzt auf dem Raster des Satzspiegels.
-% Ueberformat-Zeichen: Groesse in Rasterzeilen, Lage in Seitenanteilen.
-\newcommand{\swisscoverglyph}{a}
-\newcommand{\swisscoverglyphsize}{34}
-\newcommand{\swisscoverglyphx}{0.52}
-\newcommand{\swisscoverglyphy}{0.60}
-\newcommand{\swisscover}[4]{%
+% \swisscover*{kicker=..., title=..., subtitle=..., foot=..., client=...,
+%   docid=..., date=..., glyph=..., glyphline=..., glyphlines=...,
+%   logo=..., band=<start>/<lines>, variant=...}
+% Randabfallende Umschlagseite, seit 2.0 vollstaendig auf dem Seitenraster
+% verankert: KEINE Seitenanteilskoordinate mehr auf dem Umschlag, weder
+% fuer das Farbband (v1.x: 0.13\paperheight) noch fuer das Ueberformat-
+% zeichen (v1.x: \swisscoverglyphx/y als Bruchteile von \paperwidth/height).
+% Das Farbband ist jetzt eine Rasterzeilenspanne, band=<start>/<lines>
+% (Vorgabe 38/9); das Zeichen haengt seine Grundlinie an eine Rasterzeile
+% (glyphline, Vorgabe 30) und seine linke Kante an die Textachse
+% (\innermargin) statt an einen Seitenanteil. Anders als in 1.x hat das
+% Zeichen KEINE Vorgabe mehr ("a") -- es erscheint nur, wenn glyph=
+% ausdruecklich gesetzt wird.
+%
+% Alte Positionsform \swisscover{K}{T}{U}{F} bleibt nutzbar (mit
+% \ClassWarning), siehe \swiss@coverlegacy am Ende dieses Abschnitts.
+%
+% -- Variantenmechanik --------------------------------------------------
+% \swisscovervariant{name}{Vorgaben} hinterlegt eine Schluessel-Wert-Liste
+% unter \swiss@cvar@name (global, wie jeder andere Identitaets-Setzer).
+% \swisscoverslots verarbeitet seine Aufrufargumente in ZWEI Durchgaengen
+% ueber ZWEI PARALLELE keyval-Familien mit denselben Schluesselnamen:
+%   1. "swisscvscan": jeder Schluessel AUSSER "variant" ist dort ein
+%      No-op; "variant" sucht \swiss@cvar@<name> und wendet dessen
+%      gespeicherte Liste ueber die ECHTE Familie "swisscv" an -- das setzt
+%      also die Vorgabewerte der Variante, mit echter Wirkung.
+%   2. "swisscv": die echte Familie. "variant" ist HIER ein No-op (die
+%      Anwendung geschah bereits in Durchgang 1). Alle vom Aufrufer
+%      angegebenen Schluessel laufen hier ein zweites Mal, unabhaengig von
+%      ihrer Position in der Liste -- ein expliziter Schluessel
+%      ueberschreibt darum IMMER die Variante, gleich ob er vor oder nach
+%      "variant=..." im Aufruf steht.
+% Diese Zwei-Familien-Loesung kommt ohne xkeyval/kvsetkeys aus (die im
+% Kern bereits ueber kvoptions geladene keyval-Maschinerie reicht). Sie
+% vermeidet zugleich die Reihenfolgen-Falle der in der Aufgabenskizze
+% vorgeschlagenen Alternative (\setkeys{swisscv} zweimal ueber DIESELBE
+% Familie): dort wuerde ein zweiter Durchgang "variant=..." ERNEUT mit
+% voller Wirkung anwenden und damit einen VOR "variant=..." stehenden
+% expliziten Schluessel wieder ueberschreiben.
+\newif\ifswiss@cv@baddigit
+\newif\ifswiss@cv@showkicker
+\newif\ifswiss@cv@showfoot
+\newif\ifswiss@cv@sep
+
+% \swiss@cv@checkdigits{<Text>}: setzt \ifswiss@cv@baddigit wahr, wenn
+% <Text> leer ist oder ein Zeichen ausserhalb '0'-'9' enthaelt (Vergleich
+% ueber den Zeichencode via der Backtick-Syntax `#1, Codes 48-57). Weder
+% xstring (\IsInteger) noch l3regex sind in dieser Distribution als
+% Abhaengigkeit zugesichert (per kpsewhich geprueft); diese Schleife kommt
+% ohne beide aus. Empirisch gegen Grenzfaelle (leer, Buchstaben, Vorzeichen,
+% mehrstellig) durchgetestet, siehe Task-7-Bericht.
+\def\swiss@cv@checkdigits#1{%
+  \edef\swiss@cv@cdval{#1}%
+  \ifx\swiss@cv@cdval\@empty
+    \swiss@cv@baddigittrue
+  \else
+    \swiss@cv@baddigitfalse
+    \expandafter\swiss@cv@cdloop\swiss@cv@cdval\swiss@cv@cdend
+  \fi}
+\def\swiss@cv@cdloop#1{%
+  \ifx#1\swiss@cv@cdend
+  \else
+    \ifnum`#1<48 \swiss@cv@baddigittrue\fi
+    \ifnum`#1>57 \swiss@cv@baddigittrue\fi
+    \expandafter\swiss@cv@cdloop
+  \fi}
+\let\swiss@cv@cdend\relax
+
+% band=<start>/<lines>. \swiss@zapspace (Abschnitt 2b) normalisiert
+% zuerst Leerraum. \in@ (LaTeX-Kern, ltfssdcl.dtx, ohne zusaetzliches
+% Paket verfuegbar) prueft auf einen Schraegstrich, BEVOR das
+% Trennmakro laeuft: \in@ braucht dafuer den bereits EXPANDIERTEN Wert
+% (ein blosses \in@{/}{\swiss@cv@bandval} faende die rohe Kontrollsequenz
+% niemals als Treffer -- empirisch geprueft, siehe Task-7-Bericht), daher
+% der \edef+\noexpand-Umweg. Ohne diese Vorabpruefung liefe das
+% Trennmakro bei einem Wert ganz ohne "/" gegen kein Trennzeichen und
+% erzeugte einen rohen TeX-Fehler ("Runaway argument") statt eines
+% sauberen \ClassError. Beide Haelften werden NUR bei Gueltigkeit beider
+% als \swiss@cb@start/\swiss@cb@lines uebernommen -- bei einem Fehler
+% bleiben die zuvor von \swiss@coverreset gesetzten Vorgaben (38/9) aktiv,
+% und es folgt KEIN numerischer Vergleich auf einem ungueltigen Wert (das
+% waere dieselbe Kaskadenfalle, die Task 6 bereits bei \swisslogo traf).
+\def\swiss@cv@splitband#1/#2\@nil{%
+  \swiss@cv@baddigitfalse
+  \swiss@cv@checkdigits{#1}%
+  \ifswiss@cv@baddigit
+    \ClassError{swisstex}{Malformed band start '#1' in
+      band=\swiss@cv@bandval}%
+      {The start value in band=<start>/<lines> must be a nonnegative
+       integer (grid line number), e.g. band=38/9.}%
+  \else
+    \swiss@cv@checkdigits{#2}%
+    \ifswiss@cv@baddigit
+      \ClassError{swisstex}{Malformed band lines '#2' in
+        band=\swiss@cv@bandval}%
+        {The lines value in band=<start>/<lines> must be a nonnegative
+         integer (grid line count), e.g. band=38/9.}%
+    \else
+      \def\swiss@cb@start{#1}\def\swiss@cb@lines{#2}%
+      \ifnum\numexpr\swiss@cb@start+\swiss@cb@lines\relax>\swiss@gridlines
+        \ClassWarning{swisstex}{band=\swiss@cv@bandval reaches grid line
+          \the\numexpr\swiss@cb@start+\swiss@cb@lines\relax, beyond the
+          \swiss@gridlines-line page grid}%
+      \fi
+    \fi
+  \fi}
+
+% Alte Umschlag-Zeichen-Stellschrauben (v1.x: globaler Buchstabe plus
+% Seitenanteilslage/-groesse). Sie werden von glyph=/glyphline=/glyphlines=
+% auf \swisscover* ersetzt und bleiben als wirkungslose, warnende
+% Rueckwaertskompatibilitaet bestehen -- ein "Command undefined" waere fuer
+% ein altes Dokument haerter als eine Warnung, und die Makronamen bleiben
+% fuer ein \renewcommand in altem Praeambelcode nutzbar.
+\newcommand{\swisscoverglyph}{%
+  \ClassWarning{swisstex}{\string\swisscoverglyph\space is deprecated and
+    has no effect; use the glyph= key on \string\swisscover* instead}}
+\newcommand{\swisscoverglyphx}{%
+  \ClassWarning{swisstex}{\string\swisscoverglyphx\space is deprecated and
+    has no effect (page-fraction cover glyph position); use the
+    glyphline= key on \string\swisscover* instead (grid line, baseline)}}
+\newcommand{\swisscoverglyphy}{%
+  \ClassWarning{swisstex}{\string\swisscoverglyphy\space is deprecated and
+    has no effect (page-fraction cover glyph position); use the
+    glyphline= key on \string\swisscover* instead (grid line, baseline)}}
+\newcommand{\swisscoverglyphsize}{%
+  \ClassWarning{swisstex}{\string\swisscoverglyphsize\space is deprecated
+    and has no effect; use the glyphlines= key on \string\swisscover*
+    instead (size in grid lines)}}
+
+% Variantenregister: legt nur die Vorgaben ab (Schluessel-Wert-Text,
+% unausgewertet), wendet nichts an. \gdef-artig global wie jeder andere
+% Identitaets-Setzer (Abschnitt 2b) -- eine Variante kann aus einer
+% Identitaetsdatei ODER aus der Praeambel heraus registriert werden, in
+% beiden Faellen unabhaengig vom Aufrufort wirksam.
+\newcommand{\swisscovervariant}[2]{\expandafter\gdef\csname swiss@cvar@#1\endcsname{#2}}
+
+% -- Schluesselfamilien --------------------------------------------------
+\define@key{swisscv}{kicker}{\def\swiss@cv@kicker{#1}}
+\define@key{swisscv}{title}{\def\swiss@cv@title{#1}}
+\define@key{swisscv}{subtitle}{\def\swiss@cv@subtitle{#1}}
+\define@key{swisscv}{foot}{\def\swiss@cv@foot{#1}}
+\define@key{swisscv}{client}{\def\swiss@cv@client{#1}}
+\define@key{swisscv}{docid}{\def\swiss@cv@docid{#1}}
+\define@key{swisscv}{date}{\def\swiss@cv@date{#1}}
+\define@key{swisscv}{glyph}{\def\swiss@cg@glyph{#1}}
+\define@key{swisscv}{glyphline}{\def\swiss@cg@line{#1}}
+\define@key{swisscv}{glyphlines}{\def\swiss@cg@lines{#1}}
+\define@key{swisscv}{logo}{\def\swiss@cv@logo{#1}}
+\define@key{swisscv}{band}{%
+  \edef\swiss@cv@bandval{\swiss@zapspace{#1}}%
+  \edef\swiss@cv@sbtmp{\noexpand\in@{/}{\swiss@cv@bandval}}\swiss@cv@sbtmp
+  \ifin@
+    \expandafter\swiss@cv@splitband\swiss@cv@bandval\@nil
+  \else
+    \ClassError{swisstex}{Malformed band value '#1'}%
+      {Use band=<start>/<lines>, e.g. band=38/9 (grid lines).}%
+  \fi}
+\define@key{swisscv}{variant}{}% Wirkung laeuft ausschliesslich ueber die
+                                % Vorabpruefung in "swisscvscan", siehe oben.
+
+% Abtast-Familie: dieselben Namen, aber wirkungslos ausser "variant".
+\define@key{swisscvscan}{kicker}{}
+\define@key{swisscvscan}{title}{}
+\define@key{swisscvscan}{subtitle}{}
+\define@key{swisscvscan}{foot}{}
+\define@key{swisscvscan}{client}{}
+\define@key{swisscvscan}{docid}{}
+\define@key{swisscvscan}{date}{}
+\define@key{swisscvscan}{glyph}{}
+\define@key{swisscvscan}{glyphline}{}
+\define@key{swisscvscan}{glyphlines}{}
+\define@key{swisscvscan}{logo}{}
+\define@key{swisscvscan}{band}{}
+\define@key{swisscvscan}{variant}{%
+  \@ifundefined{swiss@cvar@#1}%
+    {\ClassError{swisstex}{Unknown cover variant '#1'}%
+       {Declare it first with \string\swisscovervariant{#1}{...}
+        (e.g. in an identity file), or fix the spelling.}}%
+    {% \setkeys braucht die Vorgabenliste bereits als ECHTEN Text mit
+     % echten Kommas/Gleichheitszeichen, nicht als unaufgeloeste
+     % \csname...\endcsname-Tokenfolge -- sonst sieht der Kommaspalter von
+     % \setkeys keine Trennstellen und uebergibt die GESAMTE Vorgabenliste
+     % als einen einzigen (unbekannten) Schluesselnamen (empirisch
+     % reproduziert: "Package keyval Error: kicker=...,title=... undefined").
+     % \edef+\noexpand loest \csname...\endcsname UND die damit benannte
+     % Kontrollsequenz vollstaendig auf, bevor \setkeys ueberhaupt laeuft --
+     % derselbe Umweg wie oben bei \in@.
+     \edef\swiss@cv@vartmp{\noexpand\setkeys{swisscv}%
+       {\csname swiss@cvar@#1\endcsname}}%
+     \swiss@cv@vartmp}}
+
+% -- Vorgaben, Sammelbecken, Aufruf --------------------------------------
+% docid/date/logo werden UNEXPANDIERT auf ihre Herkunftsquelle verwiesen
+% (\swiss@meta{...}/\swiss@logo@cover) statt sofort ausgewertet: so bindet
+% ein spaeteres \swissmeta/\swisslogofiles NACH \swisscoverreset, aber vor
+% dem tatsaechlichen Satz des Umschlags, noch korrekt (kein veraltetes
+% \edef-Abbild). Ein expliziter docid=/date=/logo=-Schluessel ueberschreibt
+% diesen Verweis ohnehin vollstaendig (\def statt \edef in den obigen
+% \define@key-Koerpern).
+\newcommand{\swiss@coverreset}{%
+  \def\swiss@cv@kicker{}\def\swiss@cv@title{}\def\swiss@cv@subtitle{}%
+  \def\swiss@cv@foot{}\def\swiss@cv@client{}%
+  \def\swiss@cv@docid{\swiss@meta{docid}}%
+  \def\swiss@cv@date{\swiss@meta{date}}%
+  \def\swiss@cg@glyph{}\def\swiss@cg@line{30}\def\swiss@cg@lines{34}%
+  \def\swiss@cv@logo{\swiss@logo@cover}%
+  \def\swiss@cb@start{38}\def\swiss@cb@lines{9}}
+
+\newcommand{\swisscoverslots}[1]{%
+  \swiss@coverreset
+  \setkeys{swisscvscan}{#1}%    % Durchgang 1: nur variant= wirkt
+  \setkeys{swisscv}{#1}%        % Durchgang 2: explizite Schluessel gewinnen
+  \swiss@coverbody}
+
+% \swiss@cv@additem{<Makro>}: haengt den EXPANDIERTEN Wert von <Makro> an
+% die Metazeile an, mit einem Trennzeichen vor jedem Folgeeintrag. Die
+% \edef-Vorabaufloesung ist noetig, weil \swiss@cv@docid/\swiss@cv@date in
+% \swiss@coverreset auf einen UNAUSGEWERTETEN \swiss@meta{...}-Aufruf
+% zeigen (siehe oben): ein \ifx-Vergleich der rohen Kontrollsequenz gegen
+% \@empty waere immer falsch, selbst wenn \swiss@meta{...} am Ende nichts
+% liefert -- erst nach dem \edef ist der WERT vergleichbar.
+\def\swiss@cv@additem#1{%
+  \edef\swiss@cv@ai@val{#1}%
+  \ifx\swiss@cv@ai@val\@empty\else
+    \ifswiss@cv@sep\ \textbar\ \fi
+    \swiss@cv@ai@val\swiss@cv@septrue
+  \fi}
+\newcommand{\swiss@cv@metaline}{%
+  \swiss@cv@sepfalse
+  \swiss@cv@additem{\swiss@cv@client}%
+  \swiss@cv@additem{\swiss@cv@docid}%
+  \swiss@cv@additem{\swiss@cv@date}}
+
+\newcommand{\swiss@coverbody}{%
   \begingroup
   \thispagestyle{swisstitle}%
   \AddToShipoutPictureBG*{%
     \ifswiss@tint\else
       \AtPageLowerLeft{\color{paper}\rule{\paperwidth}{\paperheight}}%
     \fi
-    % Ueberformat: Zeichen randabfallend rechts, im Ton des Grundes
-    \AtPageUpperLeft{\put(\LenToUnit{\swisscoverglyphx\paperwidth},%
-                          \LenToUnit{-\swisscoverglyphy\paperheight}){%
-      \makebox[0pt][l]{\color{white}%
-        \fontsize{\dimexpr\swisscoverglyphsize\gridunit\relax}%
-                 {\dimexpr\swisscoverglyphsize\gridunit\relax}%
-        \selectfont\swisscoverglyph}}}%
-    % Farbband ueber die untere Seitenbreite
-    \AtPageLowerLeft{\put(0,\LenToUnit{0.13\paperheight}){%
-      \color{band}\rule{\paperwidth}{\dimexpr9\gridunit\relax}}}}%
+    % Ueberformat-Zeichen: NUR wenn glyph= gesetzt ist (keine Vorgabe
+    % mehr). Grundlinie auf Rasterzeile \swiss@cg@line, linke Kante auf
+    % der Textachse (\innermargin) -- dieselbe Koordinatenkonvention wie
+    % das Rasterkontroll-Overlay in Abschnitt 13 (negatives y = abwaerts
+    % ab der Seitenoberkante).
+    \ifx\swiss@cg@glyph\@empty\else
+      \AtPageUpperLeft{\put(\LenToUnit{\innermargin},%
+          \LenToUnit{\dimexpr-\swiss@topmargin-\swiss@cg@line\gridunit\relax}){%
+        \makebox[0pt][l]{\color{accent}%
+          \fontsize{\dimexpr\swiss@cg@lines\gridunit\relax}%
+                   {\dimexpr\swiss@cg@lines\gridunit\relax}%
+          \selectfont\swiss@cg@glyph}}}%
+    \fi
+    % Farbband als Rasterzeilenspanne band=<start>/<lines>, volle
+    % Seitenbreite.
+    \AtPageUpperLeft{\put(0,%
+        \LenToUnit{\dimexpr-\swiss@topmargin-\swiss@cb@start\gridunit\relax}){%
+      \color{band}%
+      \rule[-\dimexpr\swiss@cb@lines\gridunit\relax]{\paperwidth}%
+        {\dimexpr\swiss@cb@lines\gridunit\relax}}}}%
   \null\vspace*{\dimexpr6\gridunit\relax}%
   \noindent\hspace*{\measureshift}%
   \begin{minipage}{\fullmeasure}%
     \color{ink}%
-    \tracked{#1}\par\vspace{\dimexpr2\gridunit\relax}
-    {\swissdisplay{4}\bfseries #2\par}%
-    \vspace{\dimexpr2\gridunit\relax}
-    {\swissdisplay{1}\color{accent}#3\par}%
+    \edef\swiss@cv@lg@val{\swiss@cv@logo}%
+    \ifx\swiss@cv@lg@val\@empty\else
+      \swisslogo{\swiss@cv@lg@val}\vspace{\gridunit}\par
+    \fi
+    % Kennzeichnungszeile: Kennzeichnung links, Klassifizierungsmarke
+    % rechtsbuendig (ab internal aufwaerts). Die Zeile erscheint, sobald
+    % EINE der beiden etwas zu zeigen hat -- eine leere Kennzeichnung ohne
+    % Klassifizierung reserviert keinen Abstand (wie Abschnitt 10).
+    \swiss@cv@showkickerfalse
+    \ifx\swiss@cv@kicker\@empty\else\swiss@cv@showkickertrue\fi
+    % \relax terminiert die Zahlenschau von \ifnum VOR dem Boolean-Setzer:
+    % ohne ihn expandiert \ifnum beim Suchen weiterer Ziffern
+    % \swiss@cv@showkickertrue selbst (es ist ein parameterloses \def-Makro
+    % und damit expandierbar) und schleust dessen Ersetzungstext
+    % "\let...=\iftrue" in den Suchlauf ein -- faellt der Vergleich dann
+    % auf FALSCH, haelt die \fi-Suche das eingeschleuste "\iftrue" fuer eine
+    % NEUE geschachtelte Bedingung und verbraucht das eigentliche
+    % schliessende \fi dafuer ("Incomplete \ifnum", empirisch reproduziert
+    % und mit \relax hier behoben, siehe Task-7-Bericht).
+    \ifnum\swiss@classlevel>0\relax\swiss@cv@showkickertrue\fi
+    \ifswiss@cv@showkicker
+      \makebox[\fullmeasure]{%
+        \ifx\swiss@cv@kicker\@empty\else\tracked{\swiss@cv@kicker}\fi
+        \hfill
+        \ifnum\swiss@classlevel>0
+          \begingroup
+          % Task 5: \swiss@str MUSS vor \tracked aufgeloest werden, sonst
+          % uppercased \MakeUppercase den Stringtabellen-SCHLUESSEL statt
+          % des nachgeschlagenen Textes.
+          \edef\swiss@cv@classtext{%
+            \swiss@str{classification-\swiss@meta@classification}}%
+          \textcolor{accent}{\tracked{\swiss@cv@classtext}}%
+          \endgroup
+        \fi}%
+      \par\vspace{\dimexpr2\gridunit\relax}%
+    \fi
+    \ifx\swiss@cv@title\@empty\else
+      {\swissdisplay{4}\bfseries\swiss@cv@title\par}%
+      \vspace{\dimexpr2\gridunit\relax}%
+    \fi
+    \ifx\swiss@cv@subtitle\@empty\else
+      {\swissdisplay{1}\color{accent}\swiss@cv@subtitle\par}%
+    \fi
   \end{minipage}%
-  \vfill
-  % Die Fusszeile sitzt im Farbband und laeuft deshalb in Weiss.
-  \noindent\hspace*{\measureshift}%
-  \begin{minipage}{\fullmeasure}%
-    \condensed\fontsize{8}{\gridunit}\selectfont\color{white}#4\par
-  \end{minipage}%
-  \vspace*{\dimexpr4\gridunit\relax}%
+  % Fusszeile: sitzt im Farbband, daher Weiss. foot= links, eine
+  % Metazeile aus client/docid/date rechtsbuendig -- docid/date sind
+  % Vorgaben aus \swissmeta (siehe \swiss@coverreset), client nur bei
+  % ausdruecklicher Angabe. Erscheint nur, wenn mindestens eines der vier
+  % etwas zu zeigen hat.
+  \swiss@cv@showfootfalse
+  \edef\swiss@cv@ft@val{\swiss@cv@foot}%
+  \ifx\swiss@cv@ft@val\@empty\else\swiss@cv@showfoottrue\fi
+  \edef\swiss@cv@ft@val{\swiss@cv@client}%
+  \ifx\swiss@cv@ft@val\@empty\else\swiss@cv@showfoottrue\fi
+  \edef\swiss@cv@ft@val{\swiss@cv@docid}%
+  \ifx\swiss@cv@ft@val\@empty\else\swiss@cv@showfoottrue\fi
+  \edef\swiss@cv@ft@val{\swiss@cv@date}%
+  \ifx\swiss@cv@ft@val\@empty\else\swiss@cv@showfoottrue\fi
+  \ifswiss@cv@showfoot
+    \vfill
+    \noindent\hspace*{\measureshift}%
+    \begin{minipage}{\fullmeasure}%
+      \condensed\fontsize{8}{\gridunit}\selectfont\color{white}%
+      \let\meta\swiss@meta % erlaubt \meta{...} innerhalb von foot=
+      \makebox[\fullmeasure]{\swiss@cv@foot\hfill\swiss@cv@metaline}\par
+    \end{minipage}%
+    \vspace*{\dimexpr4\gridunit\relax}%
+  \else
+    \vfill\vspace*{\dimexpr4\gridunit\relax}%
+  \fi
   \newpage\endgroup}
+
+% Alte Positionsform: baut weiter, aber mit Abkuendigung. Jedes Argument
+% wird GEKLAMMERT in die Schluessel-Wert-Liste eingesetzt (kicker={#1}, ...)
+% -- ohne die Klammern wuerde ein Komma IM Argumentwert (die Handbuchseite
+% selbst benutzt "Raster 13,5\,pt" als Fusszeile) faelschlich als
+% Schluesseltrennzeichen gelesen.
+\newcommand{\swiss@coverlegacy}[4]{%
+  \ClassWarning{swisstex}{positional \string\swisscover\space is
+    deprecated; use \string\swisscover*{key=value} instead}%
+  \swisscoverslots{kicker={#1},title={#2},subtitle={#3},foot={#4}}}
+\newcommand{\swisscover}{\@ifstar{\swisscoverslots}{\swiss@coverlegacy}}
 
 % ---------------------------------------------------------------------
 % 11  Tabellen  (I2, I3)

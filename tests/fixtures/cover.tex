@@ -1,0 +1,14 @@
+% Task 7: geteilte Grundvorlage fuer test_cover.py.
+%
+% Deckt gleichzeitig drei der vier Aufgabenskizze-Tests ab:
+%  - band=38/9 auf dem Rastermass (test_slot_cover_builds_and_band_on_grid)
+%  - kein glyph= gesetzt -> kein Ueberformatzeichen (test_no_glyph_by_default)
+%  - docid= nicht gesetzt -> Vorgabe aus \swissmeta (test_autofill_from_meta)
+%  - classification=internal setzt zugleich \swiss@classlevel>0, sodass
+%    dieselbe Vorlage auch die Klassifizierungsmarke auf dem Umschlag
+%    exercisiert (test_classification_mark_on_cover).
+\documentclass{swisstex}
+\swissmeta{docid=Q-9, classification=internal}
+\begin{document}
+\swisscover*{kicker=Angebot, title=Probe, band=38/9}
+\end{document}
