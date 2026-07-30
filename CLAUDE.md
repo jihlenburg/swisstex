@@ -60,15 +60,20 @@ starts (A8), figure-legend alignment (A9).
 Since v2.0 the class also writes a Kennzahlen sidecar, `<jobname>.swisscheck` (written
 `\AtEndDocument`), with its *resolved* metrics: grid unit, the three ancillary leadings
 (`\annotationleading`/`\glossleading`/`\footnoteleading`), zones, colour roles, font families,
-classification, docid. `swisscheck.py` auto-discovers `<pdf-stem>.swisscheck` next to the PDF (or
-takes one via `--params`) and, when found, checks against those *declared* values instead of
-hard-coded constants — for A1-A9 too, not only the checks below. Six more checks then activate: the
-foot baseline and its two zones (A10), the head's pagina grade and image-free head zone (A11), the
-cover's band position and display-scale grades (A12), commensurability of the ancillary leadings as
-actually measured in the margin column (A13), a self-declared band colour's distinctness from the
-signal colour (A15), and the embedded font inventory against the declared families (A16) — A14
-(bilingual setting) is not implemented yet. Without a sidecar (older PDFs) these six skip cleanly (0
-checked, never a violation) and A1-A9 fall back to the CLI/default constants, exactly as in v1.
+declared logo fonts, classification, docid. `swisscheck.py` auto-discovers `<pdf-stem>.swisscheck`
+next to the PDF (or takes one via `--params`) and, when found, checks against those *declared* values
+instead of hard-coded constants — for A1-A9 too, not only the checks below. Seven more checks then
+activate: the foot baseline and its two zones (A10), the head's pagina grade **and head baseline on
+the extended raster** plus the image-free head zone (A11), the cover's band position, display-scale
+grades and the **glyph anchor** — a cover glyph is grid-sized Ueberformat, exempt from the display
+scale but pinned to a grid line and the text axis (A12), commensurability **both of the declared
+leadings against the declared grid unit (small fraction, denominator ≤ 4) and** of the leadings as
+actually measured in the margin column (A13), colour roles — a self-declared band's distinctness from
+the signal colour *and* the printed band's fill against the declared value (A15), the embedded font
+inventory against the declared families plus any `logofonts=` declaration (A16), and gloss length —
+no gloss-column block over six consecutive lines, the machine net for I3 (A17). A14 (bilingual
+setting) is not implemented yet. Without a sidecar (older PDFs) these seven skip cleanly (0 checked,
+never a violation) and A1-A9 fall back to the CLI/default constants, exactly as in v1.
 
 Exit code 0 = clean, 1 = violations. Non-default grids are passed with `--gridunit`, `--textcolumn`,
 etc. — only load-bearing for sidecar-less PDFs; a discovered sidecar overrides them. Run it after
@@ -93,8 +98,14 @@ the same quirk for the *body* font too if it loads by family name instead of fil
 features, unlike the class's own filename-based default), so `fonts/dist/SwissTeXGrotesk*.ttf` must
 likewise sit in `~/Library/Fonts/` for the acme identity and `acme-demo.tex` to build.
 
-Build artefacts (`.aux`, `.log`, `.out`) are not gitignored — build in a scratch directory, or clean
-up afterwards.
+Build artefacts (`.aux`, `.log`, `.out`, `.toc`) *are* gitignored — this file previously claimed the
+opposite and told you to build in a scratch directory; `.gitignore` has covered them since the start
+of the v2.0 work. The one deliberate exception is the Kennzahlen sidecar: `*.swisscheck` is ignored,
+but `.gitignore` re-includes exactly three of them (`swisstex-manual.swisscheck`,
+`swisstex-demo.swisscheck`, `acme-demo.swisscheck`) so that a fresh clone can run `swisscheck.py`
+against the committed PDFs and get all sixteen implemented checks (A1–A13, A15–A17; A14 is not
+implemented) instead of silently skipping A10–A17. Regenerate those three by rebuilding their
+documents (manual twice) whenever a Kennzahl changes.
 
 ## Tests
 
@@ -103,14 +114,19 @@ fonts/.venv/bin/pytest tests/ -q
 ```
 
 Use the pytest inside `fonts/.venv` (it carries `pdfplumber`); a bare system `pytest` will not have
-it. The suite (`tests/test_acme.py`, `test_cover.py`, `test_doctrine.py`, `test_fonts.py`,
-`test_foot.py`, `test_identity.py`, `test_strings.py`, `test_swisscheck.py`, `test_title.py`) builds
+it. The suite (`tests/test_acme.py`, `test_cover.py`, `test_docexample.py`, `test_doctrine.py`,
+`test_fonts.py`, `test_foot.py`, `test_identity.py`, `test_strings.py`, `test_swisscheck.py`,
+`test_title.py`) builds
 every reference document and fixture with `xelatex` under `tests/conftest.py`'s `build_doc` helper
 (`cwd=ROOT`, output redirected to a `tmp_path`, `TEXINPUTS` gains `tests/fixtures//` so identity
 `.sty` fixtures resolve) and asserts against the resulting PDF/log/sidecar, not just a returncode —
 this is what actually enforces class behaviour beyond what `swisscheck.py` measures (error paths,
-font substitution, string fallback, and so on). It is slow (xelatex per test, ~60-70s total) because
-each assertion wants a real build, not a mock. Run the whole suite after any class change; run a
+font substitution, string fallback, and so on). It is slow (xelatex per test, ~110s total) because
+each assertion wants a real build, not a mock. `test_docexample.py` is the odd one out and worth
+knowing about: it extracts the acme excerpt from `swisstex-manual.tex` (between the
+`% BEGIN acme-excerpt` / `% END acme-excerpt` markers), un-escapes the manual's `\code{…}` notation
+back into real LaTeX and compiles it. If you edit that excerpt, keep the markers and the
+one-call-per-line `\code{…}\\` shape, or the lint cannot read it. Run the whole suite after any class change; run a
 single file (`fonts/.venv/bin/pytest tests/test_cover.py -q`) while iterating on one feature.
 
 ## The design contract: six invariants
@@ -142,8 +158,22 @@ source.
 
 ## Architecture
 
-The class file is organised in numbered sections (1–14) that follow the derivation order; read them
-in sequence rather than jumping to a command definition.
+The class file is organised in numbered sections **1, 2, 2a, 2b, 3, 4, 5, 5a, 5b, 5c, 6, 7, 8, 9,
+9a, 9b, 10, 10a, 11, 11a, 12, 13, 14, 14a** that follow the derivation order; read them in sequence
+rather than jumping to a command definition. The file order *is* the numbering order — `5b`
+(display grades) and `5c` (grid catch) were physically swapped relative to their labels until the
+final v2.0 pass and have now been renumbered in place (a comment-only change).
+
+The walkthrough below covers the load-bearing sections. The ones it does not narrate, in file order:
+**§2a** string table (see Conventions), **§9b** `\swisslogo` — a logo is a block like any other,
+height in whole grid lines, placed through `\swiss@placebox`, horizontal anchor restricted to text
+axis or full measure, missing file is a `\ClassError` *before* any `\includegraphics` runs (or
+graphicx cascades "Division by 0" on top of it), **§10** title block **and `\colophon`** — the
+colophon is the one place that reads `\swissidentitymeta` (company · legal · web, appended quietly
+after the author's text) and `\swisslogofiles{colophon=…}` (the mark, one grid unit high,
+right-aligned on the full measure; a missing file is a *warning* here, not an error — a colophon is
+trim), **§10a** covers, colour bands and the two-family variant mechanism (see Pitfalls), **§14a**
+the Kennzahlen sidecar (see Verify).
 
 ### 1. Everything derives from the key–value options (§1–2)
 
@@ -171,8 +201,11 @@ updating the option table in the manual (§2 "Klassenoptionen").
 is just a sequence of calls to the public setters (§2b): `\swissidentitymeta` (company/legal/web),
 `\swisssetcolors` (`accent`/`paper`/`ink`, optional `band` — leaving `band` unset makes it an alias
 of `accent`, the "one signal colour" default since v2.0), `\newcommand{\swissidentityfonts}{...}`
-(the font provider, §3 — see I4 below), `\swisslogofiles` (cover logo file), `\swissclassifications`
-(the ordered classification vocabulary), `\swissfootformat` (the foot-line template, `\meta{key}`
+(the font provider, §3 — see I4 below), `\swisslogofiles` (`cover=`/`colophon=` logo files plus
+`logofonts=`, the comma list of families an embedded logo brings along so A16 can allow exactly
+those), `\swissclassifications` (the ordered classification vocabulary — it re-validates an
+already-set classification, so declaring the vocabulary after `\swissmeta` cannot leave a stale
+level behind), `\swissfootformat` (the foot-line template, `\meta{key}`
 placeholders bound only at foot-typesetting time), and `\swisscovervariant` (named `\swisscover*`
 key-value presets — this one is declared in §2b specifically so an identity file can call it directly
 in its own body, *before* the identity-loading `\RequirePackage` below it; see the Fix Round 1
@@ -211,7 +244,7 @@ the second argument is what makes an element a *frame element* running to `\full
 If you build a new block-level element, wrap it in `\swiss@placebox` rather than adding vertical
 space around it.
 
-### 3. The grid catch `\gridsnap` (§5b)
+### 3. The grid catch `\gridsnap` (§5c)
 
 The complement for environments the class does not own. It reads `\pagetotal` after `\par`, pads to
 the next multiple of `\gridunit`, and fixes `\prevdepth` the same way. `\gridsnapenv{<name>}`
@@ -238,7 +271,7 @@ behaviour titlesec cannot express: `\section` prepends `\sectionrule` (the hairl
 to a preceding section (`\nopagebreak[4]`) or otherwise demand `\Needspace*{6\gridunit}`. If you touch
 sectioning, preserve this star-form dispatch — a plain `\titleformat` change will silently drop it.
 
-### 6. Type scale derives from the grid too (§5c)
+### 6. Type scale derives from the grid too (§5b)
 
 `\swissdisplay{n}` sets leading to `n\gridunit` and size to `0.80` of that, with negative tracking
 above two lines. Display sizes are therefore grid-locked by construction; do not introduce a literal
@@ -261,9 +294,15 @@ Two traps documented in the source and the manual:
 
 ## Conventions
 
-- **Language is German** throughout: class comments, manual, and user-visible strings
-  (`\tablecaptionprefix`, `\figurecaptionprefix`). Comments in `swisstex.cls` transliterate umlauts to
-  ASCII (`Abstaende`, `Ueberschriften`); the `.tex` documents use real umlauts. Keep both conventions.
+- **Language is German** throughout: class comments, manual, `swisscheck.py`'s docstrings and its
+  user-facing output. Comments in `swisstex.cls` transliterate umlauts to ASCII (`Abstaende`,
+  `Ueberschriften`); the `.tex` documents, `swisscheck.py` and the tests use real umlauts. Keep both
+  conventions. User-visible *document* strings are **not** hard-coded German any more (this file used
+  to say they were): since v2.0 every one of them goes through the §2a string table
+  (`\swiss@str{<key>}`), ships DE + EN, follows the `lang=` option, and is extendable with
+  `\swisssetstrings{<lang>}{...}`. The key set is closed and validated at definition time — a typo
+  (`tabel=…`) is a `\ClassError`, not a silent dead definition; `\swissstringkeys{...}` is the
+  documented way to widen it (e.g. for an identity's own classification vocabulary).
 - Comments in the class explain *why* a construction is necessary (which TeX mechanism would otherwise
   break the grid), not what it does. Match that when adding code — those comments are the class's real
   documentation.

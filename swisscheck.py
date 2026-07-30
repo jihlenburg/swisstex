@@ -18,19 +18,26 @@ Geprüft werden:
   A9  Figurenlegende   Abbildungslegende fluchtet mit der Abbildungsoberkante.
   A10 Fusszeile        Grundlinie auf dem Rasterfusspunkt; Klassifizierung
                        und Metadaten bleiben in ihrer je eigenen Zone.
-  A11 Kolumnentitel    Pagina im Grundschriftgrad; keine Grafik in der Kopfzone.
+  A11 Kolumnentitel    Pagina im Grundschriftgrad, Grundlinie auf der
+                       verlängerten Rasterzeile; keine Grafik in der Kopfzone.
   A12 Umschlag         Farbband auf Rasterzeilen; Schriftgrade aus der
-                       Anzeigenskala oder grundschriftgrad-nah.
-  A13 Kommensurabilität Durchschuss der Nebentexte in der Marginalspalte
-                       entspricht einer deklarierten Kennzahl.
+                       Anzeigenskala oder grundschriftgrad-nah; ein
+                       Überformatzeichen hängt an Rasterzeile und Textachse.
+  A13 Kommensurabilität Die DEKLARIERTEN Nebentext-Durchschüsse sind kleine
+                       Brüche des Rastermasses, und der in der Marginalspalte
+                       GEMESSENE Durchschuss trifft einen davon.
   A15 Farbrollen       Ein eigenständiges Band unterscheidet sich deutlich
-                       von der Signalfarbe.
+                       von der Signalfarbe; das gedruckte Band trägt den
+                       deklarierten Ton.
   A16 Schriftinventar  Nur deklarierte Schriftfamilien sind eingebettet.
+  A17 Glossenlänge     Die Glossenzone trägt Beschriftung, nicht Fliesstext
+                       (I3): kein Glossenblock über sechs Zeilen.
   (A14, zweisprachiger Satz, ist für eine spätere Ausbaustufe vorgesehen und
   hier nicht implementiert.)
 
-A10-A13/A15/A16 lesen ihre Kennzahlen aus der Sidecar-Datei <jobname>.swisscheck
-(siehe unten); ohne sie überspringen sie sich sauber (0 geprüft, kein Fehler).
+A10-A13/A15/A16/A17 lesen ihre Kennzahlen aus der Sidecar-Datei
+<jobname>.swisscheck (siehe unten); ohne sie überspringen sie sich sauber
+(0 geprüft, kein Fehler).
 
 Aufruf:
     python3 swisscheck.py bericht.pdf [--tex bericht.tex]
@@ -73,10 +80,10 @@ class Raster:
     Die ersten acht Felder sind die ursprüngliche (v1) Kommandozeilen-
     Schnittstelle, unverändert in Reihenfolge und Vorgabe -- bestehende
     Aufrufer, die per Positionsargument konstruieren, bleiben lauffähig.
-    Alle folgenden Felder sind Task 9 (Kennzahlen-Sidecar): Optional (None),
-    solange keine Sidecar-Datei vorliegt -- die sechs neuen Prüfungen
-    A10-A13/A15/A16 erkennen das an `has_sidecar` und überspringen sich
-    dann sauber, statt eine geratene Vorgabe zu prüfen.
+    Alle folgenden Felder gehören zur Kennzahlen-Sidecar-Datei: Optional
+    (None), solange keine vorliegt -- die sieben sidecar-gebundenen
+    Prüfungen A10-A13/A15/A16/A17 erkennen das an `has_sidecar` und
+    überspringen sich dann sauber, statt eine geratene Vorgabe zu prüfen.
     """
 
     outermargin: float = 24.0
@@ -105,6 +112,9 @@ class Raster:
     mainfamily: str | None = None
     condensedfamily: str | None = None
     mathfont: str | None = None
+    # Von der Identität ERKLÄRTE Fremdschriften aus eingebundenen Logodateien
+    # (\swisslogofiles{logofonts=...}); A16 lässt genau diese zusätzlich zu.
+    logofonts: tuple[str, ...] = ()
     classification: str | None = None
     docid: str | None = None
     has_sidecar: bool = False
@@ -208,6 +218,9 @@ class Raster:
                            "classification", "docid"):
             if schluessel in d:
                 kw[schluessel] = d[schluessel]
+        if "logofonts" in d:
+            kw["logofonts"] = tuple(t.strip() for t in d["logofonts"].split(",")
+                                     if t.strip())
         kw["has_sidecar"] = True
         return replace(base, **kw)
 
@@ -241,7 +254,7 @@ def _parse_rgb(s: str) -> tuple[int, int, int]:
 def lade_sidecar(pfad: str | None, pdf_pfad: str) -> dict[str, str] | None:
     """--params <Datei>, sonst Auto-Erkennung von <pdf-stamm>.swisscheck
     neben der PDF. Keine Datei gefunden -> None (altes Verhalten, A1-A9
-    unveraendert, A10-A13/A15/A16 uebersprungen)."""
+    unveraendert, A10-A13/A15/A16/A17 uebersprungen)."""
     p = Path(pfad) if pfad else Path(pdf_pfad).with_suffix(".swisscheck")
     if not p.exists():
         return None
@@ -487,15 +500,29 @@ def pruefe_marginalzonen(pdf, r: Raster, tol=0.6) -> Befund:
     """Die Marginalspalte hat zwei Zonen: links die Glossen, rechts die
     Gliederungsziffern. Überschneiden sie sich, stehen Randtext und Ziffer
     übereinander -- unabhängig davon, ob sie im konkreten Fall auf derselben
-    Zeile landen."""
+    Zeile landen.
+
+    Gewertet wird nur der Satzspiegel-Streifen (topmargin bis topmargin +
+    gridlines Rasterzeilen). Ober- und unterhalb davon gibt es weder Glossen
+    noch Gliederungsziffern: Die Kopfzone trägt Pagina und Lauftitel, die
+    Fusszone Klassifizierungsmarke und Metazeile -- beide mit einer eigenen
+    Zonenordnung, die A11 bzw. A10 prüfen. Die Klassifizierungsmarke steht
+    dort ausdrücklich über die GANZE Marginalspalte (Spezifikation 6:
+    "margin zone"), nicht nur über deren Glossenhälfte; ohne diese
+    Einschränkung meldete A7 sie als Zonenüberschreitung, obwohl sie genau
+    dort steht, wo sie hingehört."""
     b = Befund("A7", "Zonen der Marginalspalte")
     glosse_bis = r.outermargin + r.glosswidth
     for i, seite in enumerate(pdf.pages, 1):
         if vollflaechig(seite):
             continue
+        oben = r.topmargin * MM
+        unten = oben + r.gridlines * r.gridunit
         zonen = rahmenzonen(seite, r)
         for w in seite.extract_words():
             x0, x1 = w["x0"] / MM, w["x1"] / MM
+            if not (oben - 1 <= w["top"] <= unten + 1):
+                continue                      # Kopf-/Fusszone, siehe A10/A11
             if x0 >= r.innermargin - r.gutter - 1:
                 continue                      # nicht in der Marginalspalte
             if any(a <= w["top"] <= e for a, e in zonen):
@@ -604,11 +631,11 @@ def pruefe_seitenfuss(pdf, r: Raster, tex: str | None) -> Befund:
 
 
 # ---------------------------------------------------------------------
-# Task 9: A10-A13, A15, A16 -- geprüft werden DEKLARIERTE Kennzahlen aus
-# der Sidecar-Datei, nicht mehr feste Annahmen. Fehlt die Sidecar-Datei
-# (ältere PDFs), degradieren alle sechs Prüfungen sauber: 0 geprüft, eine
-# Notiz im Titel, kein Verstoss -- exakt das v1-Verhalten bleibt für PDFs
-# ohne Sidecar erhalten.
+# A10-A13, A15-A17 -- geprüft werden DEKLARIERTE Kennzahlen aus der
+# Sidecar-Datei, nicht mehr feste Annahmen. Fehlt die Sidecar-Datei (ältere
+# PDFs), degradieren alle sieben Prüfungen sauber: 0 geprüft, eine Notiz im
+# Titel, kein Verstoss -- exakt das v1-Verhalten bleibt für PDFs ohne
+# Sidecar erhalten.
 # ---------------------------------------------------------------------
 
 def _ohne_sidecar(b: Befund) -> Befund:
@@ -656,11 +683,20 @@ def pruefe_fusszeile(pdf, r: Raster, tol=0.6, postol=1.0) -> Befund:
     return b
 
 
-def pruefe_kolumnentitel(pdf, r: Raster, tol=0.35) -> Befund:
-    """A11: Die Pagina in der Kopfzone hat den Grundschriftgrad; keine
-    Grafik ragt in die Kopfzone (Oberkante oberhalb von topmargin) hinein
-    -- der Kolumnentitel der Klasse setzt dort ausschliesslich Pagina und
-    Kolumnentitel-Text, nie Vektor- oder Rastergrafik.
+def pruefe_kolumnentitel(pdf, r: Raster, tol=0.35, tol_pos=0.6) -> Befund:
+    """A11: Die Pagina in der Kopfzone hat den Grundschriftgrad und ihre
+    Grundlinie liegt auf der VERLÄNGERTEN Rasterzeile (Spiegelbild der
+    A10-Formel für die Fusszeile: dort Satzunterkante + footskip, hier
+    Satzoberkante − headsep); keine Grafik ragt in die Kopfzone (Oberkante
+    oberhalb von topmargin) hinein -- der Kolumnentitel der Klasse setzt
+    dort ausschliesslich Pagina und Kolumnentitel-Text, nie Vektor- oder
+    Rastergrafik.
+
+    Die Grundlinienprüfung ist nicht akademisch: sie fand 3,587 pt Versatz
+    in allen drei Referenzdokumenten (fancyhdr hängt an jeden Kopfinhalt
+    einen \\strut, und weil auf den Kopfsatz noch die -- unsichtbare --
+    Kopflinie folgt, rutscht der Bezugspunkt der Kopfbox um dessen Tiefe
+    unter die Textgrundlinie; siehe swisstex.cls Abschnitt 7).
 
     Geprüft werden `page.images` (Rastergrafik) UND `page.rects`/`lines`/
     `curves` (Vektorgrafik): ein per \\includegraphics eingebundenes PDF-
@@ -678,6 +714,7 @@ def pruefe_kolumnentitel(pdf, r: Raster, tol=0.35) -> Befund:
     if not r.has_sidecar:
         return _ohne_sidecar(b)
     kopfgrenze = r.topmargin * MM
+    soll = kopfgrenze - r.headsep
     for i, seite in enumerate(pdf.pages, 1):
         if vollflaechig(seite):
             continue                      # Umschlag hat keinen Kolumnentitel
@@ -690,11 +727,31 @@ def pruefe_kolumnentitel(pdf, r: Raster, tol=0.35) -> Befund:
                 b.verstoesse.append(
                     f"S.{i}: Pagina {pagina['size']:.2f} pt statt "
                     f"{r.bodysize:.2f} pt")
+            # Grundlinie der Pagina, aus der Textmatrix ihrer Zeichen (wie
+            # A2/A10) -- die Wortoberkante allein trüge die Glyphenhöhe mit.
+            paginazeichen = [c for c in seite.chars
+                             if c.get("upright", True)
+                             and c["top"] < kopfgrenze - 1
+                             and abs(c["x0"] - pagina["x0"]) < 1.0]
+            if paginazeichen:
+                grundlinie = seite.height - Counter(
+                    round(c["matrix"][5], 1)
+                    for c in paginazeichen).most_common(1)[0][0]
+                b.geprueft += 1
+                abweichung = abs(grundlinie - soll)
+                if abweichung > tol_pos:
+                    b.verstoesse.append(
+                        f"S.{i}: Kopfgrundlinie {abweichung:.2f} pt neben der "
+                        f"verlängerten Rasterzeile")
+        # Bildfreiheit der Kopfzone: EINE Prüfung je Seite (die Abwesenheit
+        # ist der geprüfte Sachverhalt). Vorher zählte `geprueft` nur die
+        # Verstösse mit -- eine saubere Seite blieb ungezählt, und die
+        # Prüfung sah in der Ausgabe leerer aus, als sie ist.
+        b.geprueft += 1
         grafik = ((seite.images or []) + (seite.rects or []) +
                   (seite.lines or []) + (seite.curves or []))
         for o in grafik:
             if o["top"] < kopfgrenze:
-                b.geprueft += 1
                 b.verstoesse.append(
                     f"S.{i}: Grafik in der Kopfzone (Oberkante {o['top']:.1f} pt)")
     return b
@@ -725,12 +782,33 @@ def _umschlag_schriftgrad_ok(size: float, r: Raster, tol=0.5) -> bool:
     return any(abs(size - 0.8 * n * r.gridunit) <= tol for n in range(1, 7))
 
 
+def _glyphzeichen(seite, r: Raster, faktor=8.0):
+    """Das Überformatzeichen einer Umschlagseite: EIN einzelnes Zeichen im
+    Grad von mindestens `faktor` Rasterzeilen.
+
+    Es ist kein Anzeigengrad und darf darum nicht an der Anzeigenskala
+    gemessen werden. Die Klasse leitet seinen Grad aus `glyphlines` ab
+    (Vorgabe 34 Rasterzeilen = 459 pt) -- ein Ueberformat, das aus dem
+    Raster stammt, nicht aus \\swissdisplay. Spezifikation 9 verlangt für
+    das Zeichen etwas anderes als eine Grössenregel: Grundlinie auf einer
+    Rasterzeile, linke Kante auf der Textachse. Genau das prüft A12
+    stattdessen (siehe unten).
+
+    Die Einzahl ist Teil der Erkennung: ein Zeichen ist ein Zeichen. Stehen
+    mehrere Zeichen in diesem Grad, ist es Satz und keine Ausnahme -- dann
+    greift die gewöhnliche Grössenregel wieder."""
+    gross = [c for c in seite.chars if c.get("size", 0) >= faktor * r.gridunit]
+    return gross if len(gross) == 1 else []
+
+
 def pruefe_umschlag(pdf, r: Raster, tol_pos=0.6, tol_size=0.5) -> Befund:
     """A12: Auf Umschlagseiten (randabfallendes Farbfeld über die ganze
     Seite) liegen Ober-/Unterkante jedes Farbbands auf topmargin + k
     Rasterzeilen; alle Schriftgrade stammen aus der Anzeigenskala, sind
-    grundschriftgrad-nah oder ausgezeichnet/Marginalien-klein."""
-    b = Befund("A12", "Umschlag: Farbband und Anzeigengrade")
+    grundschriftgrad-nah oder ausgezeichnet/Marginalien-klein. Das
+    Überformatzeichen ist von der Grössenregel ausgenommen und wird
+    stattdessen an seiner Verankerung gemessen (siehe _glyphzeichen)."""
+    b = Befund("A12", "Umschlag: Farbband, Anzeigengrade, Zeichenanker")
     if not r.has_sidecar:
         return _ohne_sidecar(b)
     for i, seite in enumerate(pdf.pages, 1):
@@ -745,13 +823,74 @@ def pruefe_umschlag(pdf, r: Raster, tol_pos=0.6, tol_size=0.5) -> Befund:
                 if abweichung > tol_pos:
                     b.verstoesse.append(
                         f"S.{i}: Band-{name} {abweichung:.2f} pt neben dem Raster")
+        glyphen = _glyphzeichen(seite, r)
+        glyphgroessen = {round(c["size"], 2) for c in glyphen}
         groessen = {round(c["size"], 2) for c in seite.chars if c.get("size")}
         for g in sorted(groessen):
+            if g in glyphgroessen:
+                continue                  # Überformatzeichen, eigene Regel
             b.geprueft += 1
             if not _umschlag_schriftgrad_ok(g, r, tol_size):
                 b.verstoesse.append(
                     f"S.{i}: Schriftgrad {g:.2f} pt ausserhalb der Anzeigenskala")
+        for c in glyphen:
+            grundlinie = seite.height - c["matrix"][5]
+            abstand = grundlinie - r.topmargin * MM
+            rest = abstand % r.gridunit
+            abweichung = min(rest, r.gridunit - rest)
+            b.geprueft += 1
+            if abweichung > tol_pos:
+                b.verstoesse.append(
+                    f"S.{i}: Zeichen-Grundlinie {abweichung:.2f} pt neben "
+                    f"dem Raster")
+            b.geprueft += 1
+            kante = abs(c["x0"] - r.innermargin * MM)
+            if kante > tol_pos:
+                b.verstoesse.append(
+                    f"S.{i}: Zeichen-Linkskante {kante:.2f} pt neben der "
+                    f"Textachse")
     return b
+
+
+def _kleiner_bruch(verhaeltnis: float, maxnenner: int = 4,
+                    tol: float = 1e-3) -> tuple[int, int] | None:
+    """Kleinster Bruch n/m mit m <= maxnenner, der `verhaeltnis` trifft;
+    None, wenn keiner passt. "Klein" heisst hier: ein Verhältnis, das man
+    beim Lesen noch als Verhältnis erkennt (2/3, 3/4, 1/2, 5/4), nicht eine
+    beliebige Dezimalzahl, die zufällig aufgeht."""
+    for m in range(1, maxnenner + 1):
+        n = round(verhaeltnis * m)
+        if n >= 1 and abs(verhaeltnis - n / m) <= tol:
+            return (n, m)
+    return None
+
+
+def _pruefe_deklarierte_verhaeltnisse(r: Raster, b: Befund,
+                                       maxnenner: int = 4) -> None:
+    """A13, erster Teil: die DEKLARIERTEN Nebentext-Durchschüsse selbst
+    müssen kleine Brüche des deklarierten Rastermasses sein.
+
+    Ohne diesen Teil prüfte A13 nur das Gemessene gegen das Deklarierte und
+    hätte damit jede in sich stimmige, aber unkommensurable Erklärung
+    durchgewinkt: eine Sidecar-Datei mit gridunit=12pt und den Durchschüssen
+    9/10.125 pt bestand die alte Fassung, obwohl 10.125/12 kein Bruch mit
+    kleinem Nenner ist (die Klasse leitet 10.125 aus einem 13,5-pt-Raster
+    ab -- die Zahlen gehören zu zwei verschiedenen Systemen). Die Doktrin
+    (Spezifikation 8) verlangt beides: das Ergebnis trifft die Erklärung,
+    UND die Erklärung ist rastergebunden."""
+    for name, wert in (("annotationleading", r.annotationleading_pt),
+                       ("glossleading", r.glossleading_pt),
+                       ("footnoteleading", r.footnoteleading_pt)):
+        if wert is None:
+            continue          # nicht deklariert -> Klassenvorgabe, per Bau 2/3, 3/4
+        b.geprueft += 1
+        verhaeltnis = wert / r.gridunit_pt
+        bruch = _kleiner_bruch(verhaeltnis, maxnenner)
+        if bruch is None:
+            b.verstoesse.append(
+                f"deklariert: {name} {wert:g} pt zu gridunit "
+                f"{r.gridunit_pt:g} pt ist Verhältnis {verhaeltnis:.4f} -- "
+                f"kein Bruch mit Nenner bis {maxnenner}")
 
 
 def pruefe_kommensurabilitaet(pdf, r: Raster, tol=0.35) -> Befund:
@@ -795,9 +934,10 @@ def pruefe_kommensurabilitaet(pdf, r: Raster, tol=0.35) -> Befund:
     Einschraenkung kostet also auf dem aktuellen Textkorpus keine reale
     Abdeckung.
     """
-    b = Befund("A13", "Kommensurabilität der Nebentexte (Marginalspalte)")
+    b = Befund("A13", "Kommensurabilität der Nebentexte")
     if not r.has_sidecar:
         return _ohne_sidecar(b)
+    _pruefe_deklarierte_verhaeltnisse(r, b)
     sollwerte = (r.annotationleading, r.glossleading, r.footnoteleading)
     schwelle = r.bodysize - 0.5
     for i, seite in enumerate(pdf.pages, 1):
@@ -837,22 +977,74 @@ def pruefe_kommensurabilitaet(pdf, r: Raster, tol=0.35) -> Befund:
     return b
 
 
-def pruefe_farbrollen(pdf, r: Raster) -> Befund:
-    """A15: Ist das Farbband nicht die Signalfarbe selbst (band != accent),
-    muss es sich im euklidischen RGB-Abstand deutlich davon unterscheiden
-    (>= 30). Band == accent (das Ein-Rot-Vorgabesystem) ist per
-    Konstruktion unterscheidbar und braucht keine Messung."""
+def _fuellfarbe(o) -> tuple[int, int, int] | None:
+    """Füllfarbe eines Rechtecks als 0-255-Tripel. pdfplumber meldet sie im
+    Farbraum des PDF-Inhaltsstroms: ein Wert (Grau), drei (RGB), vier
+    (CMYK). Alles andere (kein Wert, benannter Farbraum) ist nicht
+    vergleichbar und wird als "nicht messbar" gemeldet, nicht geraten."""
+    f = o.get("non_stroking_color")
+    if not f:
+        return None
+    try:
+        werte = [float(x) for x in f]
+    except (TypeError, ValueError):
+        return None
+    if len(werte) == 1:
+        g = werte[0]
+        return (round(g * 255),) * 3
+    if len(werte) == 3:
+        return tuple(round(max(0.0, min(1.0, x)) * 255) for x in werte)
+    if len(werte) == 4:
+        c, m, y, k = werte
+        return tuple(round(255 * (1 - min(1.0, x + k))) for x in (c, m, y))
+    return None
+
+
+def pruefe_farbrollen(pdf, r: Raster, tol_kanal=2) -> Befund:
+    """A15: Farbrollen, deklariert UND gedruckt.
+
+    Zwei Teile, beide messend:
+
+    1. Erklärung. Ist das Farbband nicht die Signalfarbe selbst
+       (band != accent), muss es sich im euklidischen RGB-Abstand deutlich
+       davon unterscheiden (>= 30) -- zwei kaum unterscheidbare Rottöne sind
+       keine zwei Rollen, sondern ein Fehler (M-B-Regel).
+    2. Ergebnis. Jedes Farbband auf einer Umschlagseite muss den
+       deklarierten Ton wirklich TRAGEN: band=accent -> die Signalfarbe,
+       ein eigenes band= -> genau dieses Tripel, je Kanal auf 2/255 genau.
+
+    Teil 2 ist der eigentliche Zugewinn dieser Fassung. Vorher zählte A15
+    auf dem Ein-Rot-Pfad (dem Vorgabepfad, also dem Normalfall) eine
+    Prüfung, ohne irgendetwas gemessen zu haben, und meldete "ok" -- die
+    Prüfung war dort vakuum. `geprueft` zählt jetzt ausschliesslich echte
+    Messungen; ein Dokument ohne Umschlag hat kein Band und darum 0."""
     b = Befund("A15", "Farbrollen: Band gegen Signalfarbe")
     if not r.has_sidecar:
         return _ohne_sidecar(b)
-    b.geprueft += 1
-    if r.band_is_accent or r.band_rgb is None:
-        return b
-    abstand = sum((a - c) ** 2 for a, c in zip(r.accent_rgb, r.band_rgb)) ** 0.5
-    if abstand < 30:
-        b.verstoesse.append(
-            f"Band {r.band_rgb} liegt nur {abstand:.1f} von der Signalfarbe "
-            f"{r.accent_rgb} entfernt (Mindestabstand 30)")
+    eigenes_band = not (r.band_is_accent or r.band_rgb is None)
+    soll = r.band_rgb if eigenes_band else r.accent_rgb
+    if eigenes_band:
+        b.geprueft += 1
+        abstand = sum((a - c) ** 2
+                      for a, c in zip(r.accent_rgb, r.band_rgb)) ** 0.5
+        if abstand < 30:
+            b.verstoesse.append(
+                f"Band {r.band_rgb} liegt nur {abstand:.1f} von der Signalfarbe "
+                f"{r.accent_rgb} entfernt (Mindestabstand 30)")
+    for i, seite in enumerate(pdf.pages, 1):
+        if not vollflaechig(seite):
+            continue                      # Farbband gibt es nur auf dem Umschlag
+        for o in _bandrechtecke(seite):
+            rgb = _fuellfarbe(o)
+            b.geprueft += 1
+            if rgb is None:
+                b.verstoesse.append(
+                    f"S.{i}: Farbband ohne lesbare Füllfarbe")
+                continue
+            if any(abs(a - c) > tol_kanal for a, c in zip(rgb, soll)):
+                b.verstoesse.append(
+                    f"S.{i}: Farbband gedruckt {rgb}, deklariert {soll} "
+                    f"({'band' if eigenes_band else 'band=accent'})")
     return b
 
 
@@ -860,15 +1052,62 @@ def _normalisiere_schriftname(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
+# Bekannte Namensspaltung: die Dateibasis, mit der die Klasse eine Familie
+# LÄDT, und der PostScript-Name, den dieselbe Familie EINGEBETTET trägt,
+# sind bei TeX Gyre nicht dieselbe Zeichenkette. "texgyreheroscn" (Datei-
+# basis, Klassenoption `sanscondensed`) heisst eingebettet
+# "TeXGyreHerosCondensed-Regular". Ohne diese Tabelle passte die Schmal-
+# schrift NIE auf ihre eigene Deklaration -- sie kam bisher nur deshalb
+# durch, weil "texgyreheros" (die Grundschrift!) als Teilzeichenkette in
+# "texgyreheroscondensedregular" steckt: die Prüfung war zufällig grün, nicht
+# richtig. Die Tabelle ist bewusst statisch und kurz: sie deckt die Fälle
+# ab, die dieses Projekt tatsächlich ausliefert, statt Namensregeln zu raten.
+_SCHRIFT_ALIAS = {
+    "texgyreheroscn": "texgyreheroscondensed",
+}
+# Weitenangaben schreiben sich je nach Hersteller "Condensed", "Cond" oder
+# "Cn"; alle drei meinen dieselbe Weite und werden auf eine Form gebracht.
+_WEITE_SUFFIXE = ("condensed", "cond", "cn")
+
+
+def _schriftbasis(s: str) -> str:
+    """Familienname in Vergleichsform: ohne Subset-Präfix (XXXXXX+), ohne
+    den \\fontname-Anhang der Mathe-Schrift ("..." /OT:... at 9.5pt), ohne
+    Schnittangabe (alles ab dem ersten Bindestrich), normalisiert und mit
+    vereinheitlichter Weitenangabe.
+
+    Die Trennung am ersten Bindestrich ist die PostScript-Konvention
+    "Familie-Schnitt". Ein Familienname, der selbst einen Bindestrich trägt,
+    würde hier zu kurz geraten -- das fängt die Teilzeichenketten-Prüfung in
+    pruefe_schriftinventar als zweiten Weg wieder auf."""
+    s = re.sub(r"^[A-Z]{6}\+", "", s.strip())
+    s = s.replace('"', "").split("/")[0].split(" at ")[0]
+    s = s.split("-")[0]
+    n = _normalisiere_schriftname(s)
+    n = _SCHRIFT_ALIAS.get(n, n)
+    for suffix in _WEITE_SUFFIXE:
+        if n.endswith(suffix) and n != suffix:
+            return n[: -len(suffix)] + "condensed"
+    return n
+
+
 def pruefe_schriftinventar(pdf, r: Raster) -> Befund:
-    """A16: Jede eingebettete Schrift (Subset-Präfix entfernt) muss zu
-    mainfamily, condensedfamily oder der Mathe-Schrift passen -- verglichen
-    über normalisierte Teilzeichenketten (Gross-/Kleinschreibung,
-    Leerzeichen, Bindestriche entfernt), nicht über exakte Gleichheit:
-    "SwissTeXGrotesk-Bold" (Schriftname) passt zu "SwissTeX Grotesk"
-    (Familie). v2.0-Dokumente müssen sauber sein -- keine Legacy-Erlaubnis
-    für TeX Gyre/Latin Modern, auch nicht für ältere \\swisscode-freie
-    Dokumente.
+    """A16: Jede eingebettete Schrift muss zu einer deklarierten Familie
+    passen -- mainfamily, condensedfamily, der Mathe-Schrift oder einer über
+    \\swisslogofiles{logofonts=...} ausdrücklich erklärten Logo-Schrift.
+    v2.0-Dokumente müssen sauber sein -- keine Legacy-Erlaubnis für TeX
+    Gyre/Latin Modern, auch nicht für ältere \\swisscode-freie Dokumente.
+
+    Verglichen wird auf zwei Wegen, in dieser Reihenfolge:
+
+    1. Basisvergleich (_schriftbasis): Familienname gegen Familienname,
+       Schnitt und Namensspaltung herausgerechnet. Das ist der genaue Weg --
+       "texgyreheroscn" trifft damit "TeXGyreHerosCondensed-Regular", und
+       zwar über die condensedfamily-Deklaration, nicht mehr zufällig über
+       die Grundschrift.
+    2. Teilzeichenkette in BEIDEN Richtungen auf den roh normalisierten
+       Namen, als Auffangnetz für Familiennamen, die die Basisbildung nicht
+       trifft (Bindestrich im Familiennamen, ungewöhnliche Anhänge).
 
     "nullfont": unicode-math lädt die Mathe-Schrift LAZY -- \\textfont
     \\symoperators bleibt TeXs eigener Platzhalter "nullfont", solange im
@@ -882,7 +1121,8 @@ def pruefe_schriftinventar(pdf, r: Raster) -> Befund:
     if not r.has_sidecar:
         return _ohne_sidecar(b)
     erlaubt = [x for x in (r.mainfamily, r.condensedfamily, r.mathfont)
-               if x and x != "nullfont"]
+               + tuple(r.logofonts) if x and x != "nullfont"]
+    erlaubt_basen = {_schriftbasis(x) for x in erlaubt}
     erlaubt_norm = [_normalisiere_schriftname(x) for x in erlaubt]
     gefunden = {c["fontname"] for seite in pdf.pages for c in seite.chars
                 if c.get("fontname")}
@@ -890,10 +1130,79 @@ def pruefe_schriftinventar(pdf, r: Raster) -> Befund:
         basis = re.sub(r"^[A-Z]{6}\+", "", fn)
         basis_norm = _normalisiere_schriftname(basis)
         b.geprueft += 1
-        if not any(basis_norm in e or e in basis_norm for e in erlaubt_norm):
-            b.verstoesse.append(
-                f"Eingebettete Schrift '{fn}' passt zu keiner deklarierten "
-                f"Familie ({', '.join(erlaubt) if erlaubt else 'keine erlaubt'})")
+        if _schriftbasis(fn) in erlaubt_basen:
+            continue
+        if any(basis_norm in e or e in basis_norm for e in erlaubt_norm):
+            continue
+        b.verstoesse.append(
+            f"Eingebettete Schrift '{fn}' passt zu keiner deklarierten "
+            f"Familie ({', '.join(erlaubt) if erlaubt else 'keine erlaubt'})")
+    return b
+
+
+def pruefe_glossenlaenge(pdf, r: Raster, maxzeilen=6) -> Befund:
+    """A17: Die Glossenzone trägt Beschriftung, nicht Fliesstext (I3).
+
+    Gemessen wird der Sachverhalt, den I3 meint, und nicht der, den man
+    gerne hätte: eine Glosse ist eine BESCHRIFTUNG, also von Etikettenlänge.
+    Ein Glossenblock, der über sechs aufeinanderfolgende Zeilen läuft, ist
+    kein Etikett mehr, sondern eine zweite Textspalte in einer Spalte, die
+    dafür nicht gebaut ist -- 22 mm Glossenbreite tragen bei jedem
+    realistischen Grad rund ein Dutzend Zeichen je Zeile.
+
+    Erkannt wird an Ort und Grad, nicht am Befehl: alles links der Grenze
+    zwischen Glossen- und Ziffernzone, unterhalb des Grundschriftgrads.
+    Das erfasst \\marg und \\sidenote ebenso wie die Legenden von
+    \\swisstable/\\swissfigure -- für alle gilt dieselbe Regel.
+    Rahmenelemente (Titelblock, Kolophon) sind ausgenommen wie bei A7: sie
+    laufen ausdrücklich über das volle Mass und ragen damit zwangsläufig in
+    die Glossenzone hinein, ohne Glossen zu sein.
+
+    Zusammenhängend heisst: der nächste Glossen-Grundlinie folgt höchstens
+    zwei Rasterzeilen später (dieselbe Blocktrennung wie A13). Zwei kurze
+    Glossen weit auseinander auf derselben Seite sind zwei Blöcke, kein
+    langer."""
+    b = Befund("A17", "Glossenlänge: Beschriftung statt Fliesstext")
+    if not r.has_sidecar:
+        return _ohne_sidecar(b)
+    grenze = (r.outermargin + r.glosswidth) * MM
+    schwelle = r.bodysize - 0.5
+    for i, seite in enumerate(pdf.pages, 1):
+        if vollflaechig(seite):
+            continue
+        zonen = rahmenzonen(seite, r)
+        zaehler: dict[float, int] = {}
+        for c in seite.chars:
+            if not c.get("upright", True):
+                continue
+            if c.get("size", 99) >= schwelle:
+                continue
+            if c["x0"] >= grenze:
+                continue
+            if any(a <= c["top"] <= e for a, e in zonen):
+                continue
+            y = round(seite.height - c["matrix"][5], 2)
+            zaehler[y] = zaehler.get(y, 0) + 1
+        # Wie bei A13: nur Grundlinien mit genug Zeichen sind echte
+        # Textzeilen, nicht einzelne verirrte Glyphen.
+        baselinien = sorted(y for y, n in zaehler.items() if n >= 3)
+        if not baselinien:
+            continue
+        block = [baselinien[0]]
+        bloecke = [block]
+        for y in baselinien[1:]:
+            if y - block[-1] <= 2 * r.gridunit:
+                block.append(y)
+            else:
+                block = [y]
+                bloecke.append(block)
+        for blk in bloecke:
+            b.geprueft += 1
+            if len(blk) > maxzeilen:
+                b.verstoesse.append(
+                    f"S.{i}: Glossenblock über {len(blk)} Zeilen "
+                    f"(höchstens {maxzeilen}) -- Beschriftung kürzen oder "
+                    f"in den Fliesstext verschieben")
     return b
 
 
@@ -904,7 +1213,7 @@ def main() -> int:
     ap.add_argument("--params",
                      help="Kennzahlen-Sidecar-Datei (sonst automatisch als "
                           "<pdf-Stamm>.swisscheck neben der PDF gesucht); "
-                          "aktiviert A10-A13/A15/A16")
+                          "aktiviert A10-A13/A15/A16/A17")
     ap.add_argument("--outermargin", type=float, default=24.0)
     ap.add_argument("--topmargin", type=float, default=26.0)
     ap.add_argument("--margincolumn", type=float, default=30.0)
@@ -938,6 +1247,7 @@ def main() -> int:
             pruefe_kommensurabilitaet(pdf, r),
             pruefe_farbrollen(pdf, r),
             pruefe_schriftinventar(pdf, r),
+            pruefe_glossenlaenge(pdf, r),
         ]
         seiten = len(pdf.pages)
 
@@ -945,7 +1255,7 @@ def main() -> int:
     print(f"Raster: Steg {r.outermargin:g} + Marginalie {r.margincolumn:g} + "
           f"Bund {r.gutter:g} + Satz {r.textcolumn:g} mm, "
           f"Zeile {r.gridunit_pt:g} pt")
-    print(f"Kennzahlen-Sidecar: {'gefunden' if sidecar is not None else 'keine (A10-A13/A15/A16 übersprungen)'}\n")
+    print(f"Kennzahlen-Sidecar: {'gefunden' if sidecar is not None else 'keine (A10-A13/A15/A16/A17 übersprungen)'}\n")
     for b in befunde:
         print(b.zeile())
         if b.verstoesse:

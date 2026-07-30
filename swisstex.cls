@@ -88,6 +88,12 @@
 \ifx\swiss@footnoteleading\@empty
   \setlength{\footnoteleading}{\dimexpr3\gridunit/4\relax}
 \else\setlength{\footnoteleading}{\swiss@footnoteleading}\fi
+% Die swiss:*-Zeilen im Log sind eine reine Baubeobachtung fuer die
+% Testsuite (tests/test_doctrine.py liest sie, weil sie schon vor
+% \begin{document} feststehen). Kanonisch ist die Kennzahlen-Sidecar-Datei
+% aus Abschnitt 14a -- sie traegt die AUFGELOESTEN Werte des fertigen
+% Dokuments und ist das, was swisscheck liest. Wer eine Kennzahl nachtraegt,
+% traegt sie dort ein; ein zusaetzliches \typeout ist optional.
 \typeout{swiss:annotationleading=\the\annotationleading}
 \typeout{swiss:glossleading=\the\glossleading}
 \typeout{swiss:footnoteleading=\the\footnoteleading}
@@ -135,8 +141,14 @@
 % Alle sichtbaren Zeichenketten laufen ueber \swiss@str{key} statt ueber
 % fest verdrahtete Woerter. Sprachen definieren sich ueber \swisssetstrings
 % (oeffentliche Schnittstelle, in Praeambel oder Identitaetsdatei nutzbar,
-% Wirkung global). Unbekannter Schluessel ist ein Fehler; unbekannte
-% Sprache faellt mit einmaliger Warnung auf english zurueck.
+% Wirkung global). Ein unbekannter Schluessel ist ein Fehler -- seit dieser
+% Ueberarbeitung bereits zur DEFINITIONSZEIT in \swisssetstrings
+% (Spezifikation 4.2), nicht erst beim Nachschlagen; die Schluesselmenge
+% laesst sich mit \swissstringkeys erweitern. Eine unbekannte Sprache
+% faellt mit Warnung auf english zurueck -- die Warnung erscheint EINMAL
+% JE SPRACHE UND SCHLUESSEL (siehe \swiss@str@warn; der frueher hier
+% stehende Kommentar "einmalig" traf nicht zu, die Warnung lief bei jeder
+% Verwendungsstelle erneut).
 %
 % \swiss@defstr@i trennt am ERSTEN Gleichheitszeichen: #1 ist als
 % getrenntes Argument angehaengt, sein Muster "=#2\@nil" liest darum nur
@@ -148,6 +160,48 @@
 % leerzeichenfreie Bezeichner, darum ist das vollstaendige Entfernen aller
 % Leerzeichen dort unschaedlich -- im Wert wird nichts angetastet, damit
 % mehrwortige Werte wie "Streng vertraulich" intakt bleiben.
+
+% \swiss@zapspace{<Text>}: wie \zap@space aus dem Kern, aber fuer den
+% EXPANDIERTEN Wert eines Makros statt fuer eine rohe Parametersubstitution
+% (\swiss@defstr@i unten wendet \zap@space direkt auf #1 an, weil #1 dort
+% schon eine Parametersubstitution ist). Ein Kontrollwort (mehrbuchstabiger
+% Befehlsname) verschluckt ein im Quelltext folgendes Leerzeichen bereits
+% bei der Tokenisierung -- \zap@space\swiss@meta@classification LEERZEICHEN
+% \@empty haette also nie ein Leerzeichen-Token zum Abgrenzen gefunden und
+% wuerde ueber \@empty hinaus weiterlaufen (empirisch bestaetigt:
+% "Paragraph ended before \zap@space was complete"). \swiss@zapspace nimmt
+% den Wert daher als GEKLAMMERTES Argument #1 entgegen: das Leerzeichen im
+% Definitionstext von \zap@space#1 LEERZEICHEN \@empty steht dort hinter
+% einer Parameterreferenz, nicht hinter einem Kontrollwort, und bleibt
+% darum ein echtes Token. Steht in Abschnitt 2a statt (wie bis v2.0) in 2b,
+% weil \swissstringkeys unten es bereits braucht.
+\def\swiss@zapspace#1{\zap@space#1 \@empty}
+
+% -- Schluesselmenge (Spezifikation 4.2) --------------------------------
+% Jeder gueltige Schluessel traegt eine Marke \swiss@strkey@<Schluessel>.
+% \swiss@str@keys haelt dieselbe Menge zusaetzlich als lesbare Liste fuer
+% Fehlermeldungen. \swissstringkeys erweitert beides -- eine Identitaet mit
+% eigenem Klassifizierungsvokabular meldet damit ihre eigenen Schluessel an,
+% BEVOR sie sie ueber \swisssetstrings definiert. Ohne diese Anmeldung
+% waere ein Tippfehler ("tabel=...") eine stille, nie nachgeschlagene
+% Definition; mit ihr ist er ein Fehler an der Stelle, an der er steht.
+\def\swiss@str@keys{table,figure,page,classification-public,%
+  classification-internal,classification-confidential,classification-strict}
+\newcommand{\swissstringkeys}[1]{%
+  \@for\swiss@sk:=#1\do{%
+    \ifx\swiss@sk\@empty\else
+      \edef\swiss@sk@n{\expandafter\swiss@zapspace\expandafter{\swiss@sk}}%
+      \global\expandafter\let\csname swiss@strkey@\swiss@sk@n\endcsname\@empty
+    \fi}%
+  % Reiner Anzeigetext fuer die Fehlermeldung; #1 wird dabei expandiert,
+  % Schluessel sind aber definitionsgemaess reine Bezeichner ohne Makros.
+  \xdef\swiss@str@keys{\swiss@str@keys,#1}}
+\@for\swiss@sk:=table,figure,page,classification-public,%
+  classification-internal,classification-confidential,%
+  classification-strict\do{%
+  \edef\swiss@sk@n{\expandafter\swiss@zapspace\expandafter{\swiss@sk}}%
+  \global\expandafter\let\csname swiss@strkey@\swiss@sk@n\endcsname\@empty}
+
 \newcommand{\swisssetstrings}[2]{%
   \begingroup
   \@for\swiss@pair:=#2\do{%
@@ -158,26 +212,111 @@
 \def\swiss@defstr#1#2{\swiss@defstr@i#1\@nil{#2}}
 \def\swiss@defstr@i#1=#2\@nil#3{%
   \edef\swiss@key{\zap@space#1 \@empty}%
-  \global\@namedef{swiss@str@#3@\swiss@key}{#2}}
+  \ifcsname swiss@strkey@\swiss@key\endcsname
+    \global\@namedef{swiss@str@#3@\swiss@key}{#2}%
+  \else
+    % Kein Rueckfall auf "trotzdem definieren": ein nicht angemeldeter
+    % Schluessel wird nie nachgeschlagen, seine Definition waere tote Last.
+    \ClassError{swisstex}{Unknown string key `\swiss@key'}%
+      {Declared keys: \swiss@str@keys. Declare a new key first with
+       \string\swissstringkeys{<key>,...}, then define it with
+       \string\swisssetstrings.}%
+  \fi}
+
+% -- Nachschlagen: expandierbarer Kern, robuster Mantel -----------------
+% Bis v2.0 gab es nur EINEN Befehl \swiss@str, der Nachschlag UND Diagnose
+% (\ClassWarning/\ClassError) in einem Koerper vermischte. Das war an den
+% beiden \edef-Aufrufstellen (Fusszeile Abschnitt 7, Umschlagkennzeichnung
+% Abschnitt 10a) nicht tragfaehig, weil beide den Text VOR \tracked
+% aufloesen muessen (sonst versalisiert \MakeUppercase den Tabellen-
+% SCHLUESSEL) und dabei den gesamten Makrokoerper expandieren:
+%   -- Rueckfallpfad: \ClassWarning expandierte mitten im \edef, seine
+%      unexpandierbaren Bestandteile (\immediate, \write, ...) landeten als
+%      Text im Ergebnis -- gesetzt wurde "IMMEDIATEINTERNAL", die Warnung
+%      selbst verschwand (empirisch reproduziert).
+%   -- Fehlerpfad: \ClassError expandierte ebenso und zerfiel in eine
+%      Kaskade aus "Undefined control sequence" statt der einen gemeinten
+%      Meldung -- genau der Fall "eigenes Vokabular ohne Zeichenketten".
+% Die Aufteilung trennt darum sauber:
+%   \swiss@str@x       reiner, EXPANDIERBARER Nachschlag, keine Diagnose
+%   \swiss@str@in      dito, in einer ausdruecklich benannten Sprache
+%   \swiss@str@resolve Aufloesung MIT Diagnose, aber ausserhalb des \edef
+%   \swiss@str         robuster Satzbefehl fuer den gewoehnlichen Aufruf
+% Wer eine Zeichenkette in einem Expansionskontext braucht, nimmt
+% \swiss@str@x/\swiss@str@resolve, nie \swiss@str.
+\def\swiss@str@x#1#2{%
+  \ifcsname swiss@str@#1@#2\endcsname
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+  {\csname swiss@str@#1@#2\endcsname}{}}
+
+% \swiss@str@in{<Sprache>}{<Schluessel>}: Nachschlag in einer AUSDRUECKLICH
+% benannten Sprache, mit demselben Rueckfall auf english wie \swiss@str,
+% aber ohne Diagnose und ohne \swiss@lang anzutasten. Erweiterungspunkt fuer
+% den zweisprachigen Satz (Plan 3, Pruefung A14): dort braucht die zweite
+% Spalte die Zeichenketten einer anderen Sprache als die Dokumentsprache.
+\def\swiss@str@in#1#2{%
+  \ifcsname swiss@str@#1@#2\endcsname
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+  {\swiss@str@x{#1}{#2}}{\swiss@str@x{english}{#2}}}
+
+% Die EINE Warnung je Sprache und Schluessel. Die Marke ist global, damit
+% sie eine Gruppe (Fusszeile, Umschlag) ueberlebt -- sonst waere "einmalig"
+% erneut nur behauptet.
+\def\swiss@str@warn#1#2{%
+  \ifcsname swiss@str@warned@#1@#2\endcsname\else
+    \global\expandafter\let\csname swiss@str@warned@#1@#2\endcsname\@empty
+    \ClassWarning{swisstex}{No string `#2' for language `#1',
+      falling back to english}%
+  \fi}
+\def\swiss@str@unknown#1{%
+  \ClassError{swisstex}{Unknown string key `#1'}%
+    {Declared keys: \swiss@str@keys. Declare a new key first with
+     \string\swissstringkeys{<key>,...}, then define it with
+     \string\swisssetstrings.}}
+
+% \swiss@str@resolve{<Makro>}{<Schluessel>}: legt den fertigen TEXT in
+% <Makro> ab und gibt die Diagnose dort aus, wo sie hingehoert -- im
+% unexpandierten Satzkontext, nicht mitten in einem \edef. \protected@edef
+% statt \edef: die Werte selbst duerfen robuste Befehle enthalten
+% (german/classification-public = \"Offentlich), die unexpandiert bis zum
+% \MakeUppercase in \tracked durchkommen muessen.
+\newcommand{\swiss@str@resolve}[2]{%
+  \ifcsname swiss@str@\swiss@lang @#2\endcsname
+    \protected@edef#1{\swiss@str@x{\swiss@lang}{#2}}%
+  \else
+    \ifcsname swiss@str@english@#2\endcsname
+      \swiss@str@warn{\swiss@lang}{#2}%
+      \protected@edef#1{\swiss@str@x{english}{#2}}%
+    \else
+      \swiss@str@unknown{#2}%
+      \def#1{}%
+    \fi
+  \fi}
+
 \DeclareRobustCommand{\swiss@str}[1]{%
   \ifcsname swiss@str@\swiss@lang @#1\endcsname
     \csname swiss@str@\swiss@lang @#1\endcsname
   \else
     \ifcsname swiss@str@english@#1\endcsname
-      \ClassWarning{swisstex}{No string `#1' for language
-        `\swiss@lang', falling back to english}%
+      \swiss@str@warn{\swiss@lang}{#1}%
       \csname swiss@str@english@#1\endcsname
     \else
-      \ClassError{swisstex}{Unknown string key `#1'}%
-        {Valid keys: table, figure, page, classification-public,
-         classification-internal, classification-confidential,
-         classification-strict. Define custom keys with
-         \string\swisssetstrings.}%
+      \swiss@str@unknown{#1}%
     \fi
   \fi}
 % Grundausstattung Deutsch/Englisch. Weitere Sprachen (siehe Handbuch)
 % werden ueber \swisssetstrings in der Praeambel oder einer eigenen
-% Identitaetsdatei nachgetragen.
+% Identitaetsdatei nachgetragen. Der Schluessel "page" ist ausgeliefert,
+% aber von der Klasse selbst noch nirgends gesetzt: die Pagina im
+% Kolumnentitel (Abschnitt 7) ist eine blosse Ziffer ohne Wort davor. Er
+% bleibt fuer eine spaetere, wortfuehrende Paginierung reserviert und ist
+% fuer eigene Konstruktionen ueber \swiss@str{page} abrufbar.
 \swisssetstrings{german}{%
   table=Tabelle,
   figure=Abbildung,
@@ -231,9 +370,21 @@
 \define@key{swissidm}{web}{\gdef\swiss@id@web{#1}}
 \newcommand{\swissidentitymeta}[1]{\setkeys{swissidm}{#1}}
 
-\gdef\swiss@logo@cover{}\gdef\swiss@logo@colophon{}
+% Logo-Dateien und die Schriften, die IN ihnen stecken. cover= und
+% colophon= benennen die Dateien (Umschlag, Kolophon); logofonts= benennt
+% die Schriftfamilien, die eine eingebundene Logodatei mitbringt, als
+% Kommaliste von Familiennamen. Grund: eine Logodatei ist fremdes Material
+% -- ein als PDF gesetztes Logo bettet seine eigene Schrift ein, und
+% swisscheck A16 (Schriftinventar) faende sie als undeklarierte Familie im
+% fertigen Dokument. Ohne diesen Kanal blieben nur zwei schlechte
+% Auswege: A16 aufweichen oder das Logo weglassen. logofonts= macht die
+% Ausnahme statt dessen ausdruecklich und pruefbar -- die Identitaet
+% ERKLAERT, welche fremde Schrift ihr Logo mitbringt, und A16 laesst genau
+% diese zu, keine andere.
+\gdef\swiss@logo@cover{}\gdef\swiss@logo@colophon{}\gdef\swiss@logo@fonts{}
 \define@key{swisslogo}{cover}{\gdef\swiss@logo@cover{#1}}
 \define@key{swisslogo}{colophon}{\gdef\swiss@logo@colophon{#1}}
+\define@key{swisslogo}{logofonts}{\gdef\swiss@logo@fonts{#1}}
 \newcommand{\swisslogofiles}[1]{\setkeys{swisslogo}{#1}}
 
 % Klassifizierungsvokabular: geordnete Liste, der Index bestimmt die
@@ -241,8 +392,17 @@
 % Sprachtabellenschluesseln classification-public/-internal/-confidential/
 % -strict aus Abschnitt 2a; eine Identitaet mit eigenem Vokabular braucht
 % passende \swisssetstrings-Eintraege fuer jeden neuen Namen.
+% \swiss@checkclass am Ende: das Vokabular darf NACH einem \swissmeta
+% wechseln (eine Identitaetsdatei laedt zwar vor der Praeambel, ein
+% Dokument kann aber beides in beliebiger Reihenfolge aufrufen). Ohne die
+% Nachpruefung bliebe ein \swiss@classlevel stehen, der auf das ALTE
+% Vokabular zeigt -- die Fusszeile setzte dann die Marke einer Stufe, die
+% es nicht mehr gibt, oder gar keine. Der Aufruf ist harmlos, solange noch
+% keine Klassifizierung gesetzt ist: \swiss@checkclass prueft das selbst
+% (\ifcsname swiss@meta@classification) und tut dann nichts.
 \def\swiss@classifications{public,internal,confidential,strict}
-\newcommand{\swissclassifications}[1]{\gdef\swiss@classifications{#1}}
+\newcommand{\swissclassifications}[1]{%
+  \gdef\swiss@classifications{#1}\swiss@checkclass}
 
 % Fusszeilenvorlage: UNEXPANDIERT gespeichert (\gdef, kein \edef/\protected@edef
 % -- Makroparametersubstitution expandiert #1 ohnehin nicht). \meta wird erst
@@ -266,19 +426,9 @@
 \gdef\swiss@meta@date{\today}% Vorgabe, ueberschreibbar wie jeder andere Schluessel
 \newcommand{\swissmeta}[1]{\setkeys{swissmeta}{#1}\swiss@checkclass}
 
-% \swiss@zapspace{<Text>}: wie \zap@space aus dem Kern, aber fuer den
-% EXPANDIERTEN Wert eines Makros statt fuer eine rohe Parametersubstitution
-% (Abschnitt 2a wendet \zap@space direkt auf #1 an, weil #1 dort schon eine
-% Parametersubstitution ist). Ein Kontrollwort (mehrbuchstabiger Befehlsname)
-% verschluckt ein im Quelltext folgendes Leerzeichen bereits bei der
-% Tokenisierung -- \zap@space\swiss@meta@classification LEERZEICHEN\@empty
-% haette also nie ein Leerzeichen-Token zum Abgrenzen gefunden und wuerde
-% ueber \@empty hinaus weiterlaufen (empirisch bestaetigt: "Paragraph ended
-% before \zap@space was complete"). \swiss@zapspace nimmt den Wert daher als
-% GEKLAMMERTES Argument #1 entgegen: das Leerzeichen im Definitionstext von
-% \zap@space#1 LEERZEICHEN \@empty steht dort hinter einer Parameterreferenz,
-% nicht hinter einem Kontrollwort, und bleibt darum ein echtes Token.
-\def\swiss@zapspace#1{\zap@space#1 \@empty}
+% \swiss@zapspace steht seit dieser Ueberarbeitung in Abschnitt 2a (dort
+% braucht \swissstringkeys es bereits); der Kommentar zu seiner Bauform
+% steht ebenfalls dort.
 % \swiss@classlevel: 0-basierter Index von \swiss@meta@classification in
 % \swiss@classifications, -1 wenn keine Klassifizierung gesetzt ist.
 % \ifx vergleicht Bedeutung (Tokenfolge), nicht Textinhalt: \@for haengt beim
@@ -493,9 +643,9 @@
 
 % ---------------------------------------------------------------------
 % 5a  Rasterprimitive
-% Beliebige Blöcke (Titel, Tabellen, Abbildungen, Formeln) haben keine
-% Höhe im Rastermass. \snaptogrid füllt auf das nächste Vielfache auf und
-% übergibt das Raster unversehrt an den folgenden Satz. Das ersetzt jede
+% Beliebige Bloecke (Titel, Tabellen, Abbildungen, Formeln) haben keine
+% Hoehe im Rastermass. \snaptogrid fuellt auf das naechste Vielfache auf und
+% uebergibt das Raster unversehrt an den folgenden Satz. Das ersetzt jede
 % handgesetzte Ausgleichskorrektur.
 % ---------------------------------------------------------------------
 \newsavebox{\swiss@gbox}
@@ -541,7 +691,7 @@
   \par\sbox{\swiss@gbox}{\begin{minipage}{\linewidth}#1\end{minipage}}%
   \swiss@placebox{\swiss@gbox}{\z@}}
 
-% Umgebungsform, auch für abgesetzte Formeln geeignet.
+% Umgebungsform, auch fuer abgesetzte Formeln geeignet.
 \newenvironment{gridblock}
   {\par\begin{lrbox}{\swiss@gbox}\begin{minipage}{\linewidth}}
   {\end{minipage}\end{lrbox}\swiss@placebox{\swiss@gbox}{\z@}}
@@ -549,7 +699,7 @@
 
 
 % ---------------------------------------------------------------------
-% 5c  Anzeigengrade
+% 5b  Anzeigengrade
 % Auch Schaugroessen bleiben am Raster: der Durchschuss ist ein Vielfaches
 % des Rastermasses, der Schriftgrad wird daraus abgeleitet. Grosse Grade
 % bekommen negative Laufweite, wie im Schaugebrauch der Grotesk ueblich.
@@ -573,7 +723,7 @@
 
 
 % ---------------------------------------------------------------------
-% 5b  Rasterfang fuer fremde Umgebungen
+% 5c  Rasterfang fuer fremde Umgebungen
 % \swiss@placebox loest das Rasterproblem fuer selbst gebaute Bloecke.
 % Umgebungen aus LaTeX und anderen Paketen bringen eigene Abstaende mit.
 % \gridsnap stellt das Raster danach wieder her, ohne die Umgebung zu
@@ -623,6 +773,37 @@
 \pagestyle{fancy}
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
+% Kopfgrundlinie auf die verlaengerte Rasterzeile (Spezifikation 6:
+% "the page number must always be aligned with a line of the text").
+%
+% Der Bezugspunkt, den LaTeX \headsep ueber dem Satzspiegel festnagelt, ist
+% die Grundlinie der KOPFBOX, nicht die Grundlinie des Kopftextes. Beim Fuss
+% fallen beide zusammen, beim Kopf nicht:
+%   Fuss  \vbox{\footrule \vskip\footruleskip <Satz>}   -- <Satz> ist der
+%         letzte Kasten, der Bezugspunkt eines \vbox ist die Grundlinie
+%         seines letzten Kastens: Kopf- und Textgrundlinie sind identisch.
+%   Kopf  \vbox{<Satz> \vskip\headruleskip \headrule}   -- der letzte Posten
+%         ist eine LINIE; der Bezugspunkt rutscht damit an die Unterkante
+%         des Stapels, also um die TIEFE von <Satz> unter dessen Grundlinie.
+% fancyhdr haengt an jeden Kopf-/Fussinhalt zusaetzlich ein \strut an (siehe
+% dort, \f@nch@def), die Tiefe von <Satz> ist also stets \dp\strutbox --
+% unabhaengig davon, ob der eigene Inhalt ueberhaupt Unterlaengen hat. Ein
+% blosses \smash um den Kopfinhalt aendert daran nichts (empirisch geprueft:
+% Grundlinie unveraendert), weil der \strut NACH dem Inhalt steht.
+% Gemessen ergab das 3,587 pt Versatz gegen die Rasterzeile in allen drei
+% Referenzdokumenten.
+%
+% \headruleskip ist der einzige von fancyhdr selbst vorgesehene Abstand
+% zwischen Satz und Linie. Auf -\dp\strutbox gesetzt, hebt er den
+% Bezugspunkt exakt um die Tiefe wieder an, die der \strut erzeugt hat --
+% keine Kennzahl, keine handgesetzte Korrektur, sondern die Gegenrechnung
+% zum \strut in derselben Groesse, in derselben Zeile ausgewertet (\strut
+% und diese Kompensation lesen beide \dp\strutbox im selben Moment und
+% heben sich darum auch dann auf, wenn ein Seitenumbruch mitten in einem
+% anderen Schriftgrad faellt). Die Kopflinie selbst ist mit
+% \headrulewidth = 0pt ohnehin unsichtbar; verschieben kann diese Rechnung
+% also nichts Sichtbares ausser dem Kopftext. Geprueft von swisscheck A11.
+\renewcommand{\headruleskip}{-\dp\strutbox}
 \fancyhead[L]{%
   \hspace*{\measureshift}%
   \makebox[0pt][l]{%
@@ -630,6 +811,13 @@
     \makebox[\dimexpr\margincolumn+\gutter\relax][l]{%
       {\fontsize{\swiss@bodysize}{\annotationleading}\selectfont\textcolor{accent}{\thepage}}}%
     \runningtitle}}
+% Fusszeile: links die Klassifizierungsmarke IN der Marginalspalte, rechts
+% ab der Textachse die Metazeile. Der aeussere Kasten misst
+% \margincolumn+\gutter, damit die Metazeile auf der Textachse beginnt; der
+% INNERE misst \margincolumn und benennt damit die Zone, die die Marke nicht
+% verlassen darf (swisscheck A10/A4 messen genau diese Kante). Da ein
+% \makebox nicht beschneidet, haelt \swiss@trackedfit (Abschnitt 10) die
+% Marke von sich aus in dieser Breite.
 \fancyfoot[L]{%
   \hspace*{\measureshift}%
   \makebox[0pt][l]{%
@@ -637,8 +825,10 @@
     \makebox[\dimexpr\margincolumn+\gutter\relax][l]{%
       \ifnum\swiss@classlevel>0
         \begingroup
-        \edef\swiss@classtext{\swiss@str{classification-\swiss@meta@classification}}%
-        \textcolor{accent}{\tracked{\swiss@classtext}}%
+        \swiss@str@resolve\swiss@classtext
+          {classification-\swiss@meta@classification}%
+        \makebox[\margincolumn][l]{%
+          \textcolor{accent}{\swiss@trackedfit{\swiss@classtext}}}%
         \endgroup
       \fi}%
     \color{quiet}%
@@ -795,6 +985,54 @@
 \newcommand{\tracked}[1]{{\condensed\fontsize{7.5}{\annotationleading}\selectfont
   \addfontfeature{LetterSpace=16}\MakeUppercase{#1}}}
 
+% -- Marke in fester Zonenbreite ----------------------------------------
+% \swiss@trackedfit{<Text>}: dieselbe gesperrte Versalmarke wie \tracked,
+% aber garantiert innerhalb von \margincolumn. Die Fusszeile setzt die
+% Klassifizierungsmarke in die Marginalspalte (Abschnitt 7); ein \makebox
+% beschneidet nicht, eine zu breite Marke liefe also in den Bund und
+% verletzte die Spaltenregel (I3). Genau das war der Fall: die deutsche
+% Stufe "Streng vertraulich" mass gesperrt 55,4 mm ab Papierkante, die
+% englische "Strictly confidential" 58,6 mm -- beide ueber der Zonengrenze
+% bei 54 mm (Steg 24 + Marginalspalte 30). swisscheck A10 und A4 melden das
+% zu Recht als Verstoss.
+%
+% Die Regel ist eine feste, gemessene Leiter statt einer Rechnung: erst der
+% Kennzeichnungsgrad in voller Sperrung, dann halbe Sperrung, dann derselbe
+% Satz einen Grad kleiner, zuletzt ungesperrt klein. Gewaehlt wird die
+% ERSTE Stufe, die in \margincolumn passt; gemessen wird mit \settowidth
+% an genau der Konstruktion, die anschliessend gesetzt wird, also
+% deterministisch und unabhaengig von der Schrift der Identitaet. Ein
+% laengeres Vokabular als "Strictly confidential" faellt bis auf die letzte
+% Stufe durch und meldet sich dann mit einer Warnung, statt stumm in den
+% Bund zu laufen.
+\newlength{\swiss@mkw}
+\newif\ifswiss@markfits
+\newcommand{\swiss@markset}[3]{{\condensed\fontsize{#1}{\annotationleading}%
+  \selectfont\ifnum#2>0 \addfontfeature{LetterSpace=#2}\fi\MakeUppercase{#3}}}
+\newcommand{\swiss@marktry}[3]{%
+  \settowidth{\swiss@mkw}{\swiss@markset{#1}{#2}{#3}}%
+  \ifdim\swiss@mkw>\margincolumn\swiss@markfitsfalse\else\swiss@markfitstrue\fi}
+\newcommand{\swiss@trackedfit}[1]{%
+  \swiss@marktry{7.5}{16}{#1}%
+  \ifswiss@markfits\swiss@markset{7.5}{16}{#1}%
+  \else
+    \swiss@marktry{7.5}{8}{#1}%
+    \ifswiss@markfits\swiss@markset{7.5}{8}{#1}%
+    \else
+      \swiss@marktry{6.5}{8}{#1}%
+      \ifswiss@markfits\swiss@markset{6.5}{8}{#1}%
+      \else
+        \swiss@marktry{6.5}{0}{#1}%
+        \ifswiss@markfits\else
+          \ClassWarning{swisstex}{Classification mark `#1' is wider than
+            \string\margincolumn\space even at the smallest grade; shorten
+            the vocabulary entry or widen margincolumn}%
+        \fi
+        \swiss@markset{6.5}{0}{#1}%
+      \fi
+    \fi
+  \fi}
+
 % \swisstitle{Kennzeichnung}{Titel}{Untertitel} -- klassische Positionsform.
 % \swisstitle*{kicker=..., title=..., subtitle=...} -- Slot-Form (seit 2.0):
 % leere Slots lassen ihren eigenen Abstand entfallen, statt einen leeren
@@ -832,7 +1070,10 @@
         {\fontsize{10.5}{\gridunit}\selectfont\color{quiet}\swiss@tt@s\par}%
       \fi
       \vspace{\gridunit}%
-      {\color{black}\hrule height 1.2pt}%
+      % Farbrolle statt Rohfarbe: die Titellinie traegt die Textfarbe des
+      % Dokuments (ink), nicht ein festes Schwarz -- eine Identitaet, die
+      % ink= verschiebt, nimmt die Linie mit.
+      {\color{ink}\hrule height 1.2pt}%
     \end{minipage}}%
   \swiss@placebox{\swiss@gbox}{-\measureshift}}
 
@@ -850,11 +1091,69 @@
 
 \newcommand{\swisstitle}{\@ifstar{\swiss@titleslots}{\swiss@titleargs}}
 
+% Kolophon: Rahmenelement auf vollem Mass am Fuss der letzten Seite. Seit
+% dieser Ueberarbeitung liest es die Identitaetsangaben mit -- bis dahin
+% waren \swissidentitymeta (Firma/Impressum/Web) und der colophon=-Schluessel
+% von \swisslogofiles zwar setzbar, aber von keiner Stelle der Klasse
+% gelesen: tote Konfiguration, im Handbuch als offener Randfall vermerkt.
+% Beides haengt jetzt hier, weil das Kolophon der Ort ist, an dem eine
+% Herkunftsangabe hingehoert (der Kolumnentitel bleibt markenfrei, siehe
+% Abschnitt 7).
+%
+% Reihenfolge: erst der Text des Dokuments (#1), dann -- leise, in derselben
+% Groesse -- die Identitaetszeile, zuletzt die Marke rechtsbuendig auf dem
+% vollen Mass. Alles innerhalb DERSELBEN minipage wie bisher; nach aussen
+% bleibt das Kolophon damit genau ein Block, und die Rasterlage aendert sich
+% durch die Erweiterung nicht.
+\gdef\swiss@col@sep{}
+\def\swiss@col@additem#1{%
+  \ifx#1\@empty\else
+    \swiss@col@sep#1\gdef\swiss@col@sep{ \textperiodcentered\ }%
+  \fi}
+% \parskip\z@: der Zusatz ist eine Fortsetzung desselben Kolophons, keine
+% neue Aussage -- eine ganze Rasterzeile Abstand waere hier Betonung, die
+% der Zeile nicht zusteht. Die Zuweisung wirkt gruppenlokal (der Aufrufer
+% setzt sie innerhalb der Schriftgruppe des Kolophontextes).
+\newcommand{\swiss@colophon@meta}{%
+  \protected@edef\swiss@col@all{%
+    \swiss@id@company\swiss@id@legal\swiss@id@web}%
+  \ifx\swiss@col@all\@empty\else
+    \par\parskip\z@\noindent
+    \gdef\swiss@col@sep{}%
+    \swiss@col@additem\swiss@id@company
+    \swiss@col@additem\swiss@id@legal
+    \swiss@col@additem\swiss@id@web
+  \fi}
+% Die Marke haengt an der Grundlinie des Kolophontextes und ist genau eine
+% Rasterzeile hoch -- dasselbe Mass, das \swisslogo als kleinste Stufe
+% kennt. \hfill im Absatz statt \makebox: die Zeile laeuft ohnehin ueber das
+% volle Mass der minipage. \IfFileExists gilt hier wie bei \swisslogo
+% (Abschnitt 9b): eine fehlende Datei darf keine graphicx-Kaskade ausloesen.
+% Anders als dort ist sie aber nur eine Warnung -- ein Kolophon ist Beiwerk,
+% eine fehlende Marke soll den Bau eines fertigen Dokuments nicht abbrechen.
+\newcommand{\swiss@colophon@mark}{%
+  \ifx\swiss@logo@colophon\@empty\else
+    \IfFileExists{\swiss@logo@colophon}%
+      {\par\begingroup\parskip\z@
+       \vspace{\dimexpr\gridunit/2\relax}%
+       \noindent\hfill
+       \includegraphics[height=\gridunit]{\swiss@logo@colophon}%
+       \par\endgroup}%
+      {\ClassWarning{swisstex}{Colophon logo '\swiss@logo@colophon' not
+         found; colophon mark omitted}}%
+  \fi}
 \newcommand{\colophon}[1]{%
   \par\vfill\noindent\hspace*{\measureshift}%
   \begin{minipage}{\fullmeasure}%
-    {\color{hairline}\rule{\fullmeasure}{0.4pt}}\par\vspace{6pt}
-    {\condensed\fontsize{7}{\glossleading}\selectfont\color{quiet}#1\par}%
+    % Blockinnenabstand, kein Aussenmass: die halbe Rasterzeile trennt
+    % Linie und Satz INNERHALB des Kolophonblocks. Nach aussen zaehlt nur
+    % die Gesamthoehe des Blocks (dieselbe Begruendung wie beim Titelblock,
+    % Abschnitt 10) -- bis hierher stand an dieser Stelle ein rohes 6pt.
+    {\color{hairline}\rule{\fullmeasure}{0.4pt}}\par
+    \vspace{\dimexpr\gridunit/2\relax}
+    {\condensed\fontsize{7}{\glossleading}\selectfont\color{quiet}%
+     #1\swiss@colophon@meta\par}%
+    \swiss@colophon@mark
   \end{minipage}\par}
 
 \newenvironment{lead}
@@ -870,8 +1169,13 @@
 % bleibt am Raster, weil sie ueber \swiss@placebox gesetzt werden.
 % ---------------------------------------------------------------------
 
-% \swissband[n]{Inhalt}
-% Farbfeld ueber das volle Mass, n Rasterzeilen hoch, Satz in Weiss.
+% \begin{swissband} ... \end{swissband}
+% Farbfeld ueber das volle Mass, Satz in Weiss. KEIN Hoehenargument: die
+% Hoehe ergibt sich aus dem Inhalt und wird ueber \swiss@ceil auf ganze
+% Rasterzeilen aufgerundet (siehe unten) -- der frueher hier stehende
+% Kommentar "\swissband[n]{Inhalt}" beschrieb eine Aufrufform, die es nie
+% gab. Die Zahl der sichtbaren Blindzeilen darueber steuert
+% \swissbandlead, den Innenabstand \swissbandpadding.
 \newsavebox{\swiss@bbox}
 \newcommand{\swissbandpadding}{\gridunit}   % Innenabstand des Feldes
 \newcommand{\swissbandlead}{1}              % sichtbare Blindzeilen darueber
@@ -1211,11 +1515,15 @@
         \hfill
         \ifnum\swiss@classlevel>0
           \begingroup
-          % Task 5: \swiss@str MUSS vor \tracked aufgeloest werden, sonst
-          % uppercased \MakeUppercase den Stringtabellen-SCHLUESSEL statt
-          % des nachgeschlagenen Textes.
-          \edef\swiss@cv@classtext{%
-            \swiss@str{classification-\swiss@meta@classification}}%
+          % Task 5: die Zeichenkette MUSS vor \tracked aufgeloest werden,
+          % sonst versalisiert \MakeUppercase den Stringtabellen-SCHLUESSEL
+          % statt des nachgeschlagenen Textes. \swiss@str@resolve statt
+          % \edef\swiss@str: die Aufloesung ist expandierbar, die Diagnose
+          % bleibt ausserhalb der Expansion (siehe Abschnitt 2a). Hier ohne
+          % Breitenanpassung -- der Umschlag setzt die Marke rechtsbuendig
+          % auf dem vollen Mass, nicht in der Marginalspalte.
+          \swiss@str@resolve\swiss@cv@classtext
+            {classification-\swiss@meta@classification}%
           \textcolor{accent}{\tracked{\swiss@cv@classtext}}%
           \endgroup
         \fi}%
@@ -1235,6 +1543,15 @@
   % ausdruecklicher Angabe. Erscheint nur, wenn mindestens eines der vier
   % etwas zu zeigen hat.
   \swiss@cv@showfootfalse
+  % \meta MUSS vor den vier Proben gebunden sein, nicht erst beim Satz der
+  % Fusszeile weiter unten: die Proben sind \edef-Vergleiche, und ein
+  % foot=\meta{docid} (die dokumentierte Schreibweise, dieselbe wie in
+  % \swissfootformat) traefe dort sonst auf eine noch undefinierte
+  % Kontrollsequenz -- "Undefined control sequence \meta" mitten im
+  % Umschlagaufbau, obwohl der Aufruf voellig regelkonform ist. Die Bindung
+  % gilt bis zum \endgroup dieses Umschlags (\begingroup steht am Anfang von
+  % \swiss@coverbody), sickert also nicht ins Dokument.
+  \let\meta\swiss@meta
   \edef\swiss@cv@ft@val{\swiss@cv@foot}%
   \ifx\swiss@cv@ft@val\@empty\else\swiss@cv@showfoottrue\fi
   \edef\swiss@cv@ft@val{\swiss@cv@client}%
@@ -1248,7 +1565,9 @@
     \noindent\hspace*{\measureshift}%
     \begin{minipage}{\fullmeasure}%
       \condensed\fontsize{8}{\gridunit}\selectfont\color{white}%
-      \let\meta\swiss@meta % erlaubt \meta{...} innerhalb von foot=
+      % \meta ist bereits vor den Proben oben gebunden (siehe dort) und
+      % gilt in dieser Gruppe weiter -- \meta{...} innerhalb von foot=
+      % funktioniert damit in BEIDEN Durchgaengen, Probe wie Satz.
       \makebox[\fullmeasure]{\swiss@cv@foot\hfill\swiss@cv@metaline}\par
     \end{minipage}%
     \vspace*{\dimexpr4\gridunit\relax}%
@@ -1503,6 +1822,11 @@
   \immediate\write\swiss@sc@file{mainfamily=\swiss@sc@main}%
   \immediate\write\swiss@sc@file{condensedfamily=\swiss@sc@cond}%
   \immediate\write\swiss@sc@file{mathfont=\swiss@sc@math}%
+  % Fremde Schriften, die eine eingebundene Logodatei mitbringt -- von der
+  % Identitaet ueber \swisslogofiles{logofonts=...} ERKLAERT, nicht
+  % gemessen. A16 nimmt sie zusaetzlich zu mainfamily/condensedfamily/
+  % mathfont in die erlaubte Menge auf; leer heisst "keine".
+  \immediate\write\swiss@sc@file{logofonts=\swiss@logo@fonts}%
   \immediate\write\swiss@sc@file{classification=\swiss@sc@class}%
   \immediate\write\swiss@sc@file{docid=\swiss@meta{docid}}%
   \immediate\closeout\swiss@sc@file}

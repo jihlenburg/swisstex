@@ -13,8 +13,9 @@
    \textbar{} Satzspiegel 105\,mm}}
 
 \begin{lead}
-SwissTeX leitet den gesamten Satzspiegel aus sieben Kennzahlen ab. Es gibt
-keine handgesetzten Abstände. Wer eine Kennzahl ändert, ändert das System
+SwissTeX leitet den gesamten Satzspiegel aus zehn Kennzahlen ab -- Papier\-breite
+und -höhe, Steg, Marginalspalte, Bund, Ziffernzone, Satzspiegel, oberer Steg,
+Rasterzeilenzahl und Rastermass. Es gibt keine handgesetzten Abstände. Wer eine Kennzahl ändert, ändert das System
 konsistent mit. Diese Dokumentation ist mit der Klasse selbst gesetzt.
 \end{lead}
 
@@ -56,7 +57,7 @@ I6 & Überschriften hängen am nachfolgenden Block
 
 \subsection{Warum das Rastermass schwierig ist}
 
-\marg{Der schwierigste Teil der Klasse steckt in \code{\textbackslash swiss@placebox}}
+\marg{Der Kern: \code{\textbackslash swiss@placebox}}
 Ein Block, dessen Höhe kein Vielfaches des Rastermasses ist, verschiebt allen
 folgenden Satz. Das naheliegende Aufrunden der Blockhöhe genügt nicht, weil
 TeX beim Anfügen einer Box Zeilenausgleich einsetzt, dessen Betrag von der
@@ -131,7 +132,7 @@ sondern blieb dem laufenden Tabellensatz vorbehalten. Die Klasse folgt dem
 jetzt; Tabellenkörper, Fussnoten und das Kolophon bleiben in der
 Schmalschrift.
 
-\marg{Eine Regel, eine Signalfarbe: \code{band} folgt \code{accent}, bis eine Identität sie ausdrücklich trennt}
+\marg{Eine Signalfarbe: \code{band} folgt \code{accent}}
 Auch die Klassenoption \code{band} verliert mit Version 2.0 ihren eigenen
 Vorgabewert: Er ist jetzt leer, und ein leerer Wert bedeutet
 \code{band = accent} -- Bandfelder tragen dieselbe Signalfarbe wie
@@ -148,7 +149,7 @@ Aufruf entscheidet.
 
 \subsection{Befehle und Umgebungen}
 
-\marg{Die Positionsform \code{\textbackslash swisstitle\{K\}\{T\}\{U\}} gilt ab Version 2.1 als veraltet; die Slot-Form \code{\textbackslash swisstitle*} ist ihr Ersatz}
+\marg{Positionsform ab 2.1 veraltet}
 Seit Version 2.0 steht neben der klassischen Positionsform von
 \code{\textbackslash swisstitle} eine Slot-Form mit Schlüssel-Wert-Syntax,
 \code{\textbackslash swisstitle*\{kicker=..., title=..., subtitle=...\}}.
@@ -175,6 +176,9 @@ verwenden.
 \addlinespace[3.5pt]
 \code{\textbackslash swisssetstrings\{...\}\{...\}} & Sprache definieren
   oder ergänzen (Abschnitt~\ref{sec:sprachen}) \\
+\addlinespace[3.5pt]
+\code{\textbackslash swissstringkeys\{...\}} & eigene Zeichenketten-Schlüssel
+  anmelden (Abschnitt~\ref{sec:sprachen}) \\
 \addlinespace[3.5pt]
 \code{\textbackslash swisscode\{...\}} & Schmalschrift 8,5\,pt auf
   Rastermass, für Code und Bezeichner; \code{\textbackslash code} ist ein
@@ -212,7 +216,7 @@ verwenden.
 \subsection{Sprachen}
 \label{sec:sprachen}
 
-\marg{Unbekannter Schlüssel ist ein Fehler, unbekannte Sprache nur eine Warnung mit Rückfall auf Englisch}
+\marg{Schlüssel: Fehler. Sprache: Warnung}
 Alle sichtbaren Zeichenketten der Klasse -- die Präfixe von Tabellen- und
 Abbildungslegende, das Wort für ``Seite'' sowie die vier Klassifizierungsstufen
 -- laufen über eine interne, nach Sprache gegliederte Tabelle statt über fest
@@ -235,14 +239,33 @@ figure=Illustration,}\\
 \end{gridblock}
 
 Fehlt für die eingestellte Sprache ein einzelner Schlüssel, fällt die Klasse
-mit einer Warnung auf die englische Zeichenkette zurück; ein Schlüssel, der
-auch dort nicht existiert, ist ein Fehler. Damit lässt sich eine Sprache auch
-schrittweise nachrüsten, ohne dass ein vergessener Schlüssel unbemerkt bliebe.
+mit einer Warnung auf die englische Zeichenkette zurück -- einmal je Sprache
+und Schlüssel, nicht bei jeder Verwendungsstelle erneut. Damit lässt sich eine
+Sprache auch schrittweise nachrüsten, ohne dass ein vergessener Schlüssel
+unbemerkt bliebe.
+
+\marg{Ein Tippfehler ist ein Fehler, keine tote Definition}
+Die Schlüsselmenge selbst ist geschlossen: \code{\textbackslash
+swisssetstrings} prüft jeden Schlüssel schon beim Definieren gegen die
+ausgelieferte Menge und bricht bei einem unbekannten mit einer Fehlermeldung
+ab. Ein verschriebenes \code{tabel=...} bliebe sonst eine stille, nie
+nachgeschlagene Definition. Wer eigene Schlüssel braucht -- etwa für ein
+eigenes Klassifizierungsvokabular --, meldet sie vorher an:
+
+\begin{gridblock}
+\code{\textbackslash swissstringkeys\{classification-restricted\}}\\
+\code{\textbackslash swisssetstrings\{german\}\{classification-restricted=Gesperrt\}}
+\end{gridblock}
+
+Der Schlüssel \code{page} ist ausgeliefert, wird von der Klasse selbst aber
+noch nirgends gesetzt: Die Pagina im Kolumnentitel ist eine blosse Ziffer ohne
+Wort davor. Er bleibt für eine spätere, wortführende Paginierung reserviert
+und steht eigenen Konstruktionen zur Verfügung.
 
 \subsection{Identität}
 \label{sec:identitaet}
 
-\marg{Eine Identitätsdatei nutzt ausschliesslich die öffentlichen Setzer, nie internes Patchen}
+\marg{Nur öffentliche Setzer}
 Die Klassenoption \code{identity=Name} lädt beim
 \code{\textbackslash documentclass}-Aufruf eine Datei
 \code{swissidentity-Name.sty}, falls gesetzt -- fehlt diese Datei, bricht
@@ -263,7 +286,8 @@ aufrufbar sind:
 \addlinespace[3.5pt]
 \code{\textbackslash newcommand\{\textbackslash swissidentityfonts\}\{...\}} & Schriftanbieter, ersetzt die Vorgabeschrift vollständig (I4, siehe unten) \\
 \addlinespace[3.5pt]
-\code{\textbackslash swisslogofiles\{...\}} & Logo-Datei für den Umschlag \\
+\code{\textbackslash swisslogofiles\{...\}} & Logo-Dateien und ihre
+  Schriften: \code{cover}, \code{colophon}, \code{logofonts} \\
 \addlinespace[3.5pt]
 \code{\textbackslash swissclassifications\{...\}} & geordnetes Klassifizierungsvokabular \\
 \addlinespace[3.5pt]
@@ -277,7 +301,7 @@ aufrufbar sind:
 \end{tabularx}
 \end{swisstable}
 
-\marg{Der \code{colophon}-Schlüssel von \code{\textbackslash swisslogofiles} wird abgelegt, aber von \code{\textbackslash colophon} in Version 2.0 noch nicht gelesen -- ein offen dokumentierter Randfall, kein stiller Fehler}
+\marg{Kolophon liest die Identität}
 Alle Setzer wirken global, unabhängig von der Gruppierung an der
 Aufrufstelle -- wie \code{\textbackslash swisssetstrings} in
 Abschnitt~\ref{sec:sprachen}. \code{\textbackslash swissmeta} ist der
@@ -287,8 +311,35 @@ einzelnen Dokuments, \code{date} setzt sich ohne eigene Angabe auf
 \code{\textbackslash swissclassifications} gesetzten Vokabular (Vorgabe:
 \code{public}, \code{internal}, \code{confidential}, \code{strict}, siehe
 Abschnitt~\ref{sec:sprachen}); ein Wert ausserhalb dieses Vokabulars ist ein
-Fehler, kein stiller Rückfall. Ohne \code{identity=} bleibt die Klasse bei
-ihrer Vorgabe. Fusszeile, Umschlag und Kolophon lesen diese Angaben.
+Fehler, kein stiller Rückfall -- und zwar auch dann, wenn das Vokabular erst
+NACH \code{\textbackslash swissmeta} gesetzt wird: \code{\textbackslash
+swissclassifications} prüft eine bereits gesetzte Klassifizierung erneut gegen
+die neue Liste, statt eine Einstufung stehen zu lassen, die auf das alte
+Vokabular zeigt. Ohne \code{identity=} bleibt die Klasse bei ihrer Vorgabe.
+
+Gelesen werden diese Angaben an drei Stellen, und jede liest ihre eigenen:
+Fusszeile und Umschlag nehmen die Dokumentangaben aus
+\code{\textbackslash swissmeta} (Kennung, Version, Datum, Auftraggeber,
+Klassifizierung), das Kolophon die Identitätsangaben aus
+\code{\textbackslash swissidentitymeta} sowie die Marke aus dem
+\code{colophon}-Schlüssel von \code{\textbackslash swisslogofiles}. Die
+beiden letzteren waren bis Version 2.0 zwar setzbar, aber von keiner Stelle
+der Klasse gelesen -- tote Konfiguration, hier seinerzeit als offener
+Randfall vermerkt. Sie hängen jetzt am Kolophon: hinter dem Text des
+Dokuments folgt, leise und im selben Grad, eine Zeile aus Firma, Impressum
+und Web-Adresse, darunter rechtsbündig die Marke in Höhe einer Rasterzeile.
+Fehlt eine der Angaben, entfällt sie ersatzlos; fehlt die Markendatei,
+meldet die Klasse eine Warnung und lässt die Marke weg, statt den Bau eines
+fertigen Dokuments an einem Beiwerk abzubrechen.
+
+\code{logofonts} ist der dritte Schlüssel von
+\code{\textbackslash swisslogofiles} und benennt als Kommaliste die
+Schriftfamilien, die eine eingebundene Logodatei selbst mitbringt. Eine
+Logodatei ist fremdes Material: Ein als PDF gesetztes Logo bettet seine
+eigene Schrift ein, und die Prüfung des Schriftinventars (A16,
+Abschnitt~\ref{sec:pruefung}) fände sie sonst als undeklarierte Familie im
+fertigen Dokument. Mit \code{logofonts} erklärt die Identität diese Ausnahme
+ausdrücklich -- und A16 lässt genau diese Familie zu, keine andere.
 
 \subsubsection{Vollständigkeit ist Pflicht des Anbieters (I4)}
 
@@ -315,17 +366,25 @@ die im Kennzahlen-Sidecar deklarierten Familien. Die Referenzidentität
 \code{acme} ist ein neutraler Platzhaltername, keine reale Firma. Ein
 Auszug aus \code{swissidentity-acme.sty}:
 
+% BEGIN acme-excerpt -- maschinell gelesen von
+% tests/test_docexample.py::test_manual_acme_excerpt_compiles. Jede Zeile
+% dieses Blocks wird dort zurück in echtes LaTeX übersetzt und tatsächlich
+% übersetzt; ein Tippfehler im Beispiel (etwa fehlende Klammern um ein
+% RGB-Tripel) ist damit ein Testfehler, keine stille Falle für den Leser.
+% Format je Zeile: \code{...} mit \textbackslash/\{/\} escaped, optional
+% \hspace{1.5em} als Einrückung, Zeilenende \\ ausser in der letzten Zeile.
 \begin{gridblock}
 \code{\textbackslash swissidentitymeta\{company=Acme AG, web=acme.example\}}\\
-\code{\textbackslash swisssetcolors\{accent=200,16,46, paper=245,244,238, ink=26,26,26\}}\\
+\code{\textbackslash swisssetcolors\{accent=\{200,16,46\}, paper=\{245,244,238\}, ink=\{26,26,26\}\}}\\
 \code{\textbackslash newcommand\{\textbackslash swissidentityfonts\}\{}\\
 \code{\hspace{1.5em}\textbackslash setmainfont\{SwissTeX Grotesk\}}\\
 \code{\hspace{1.5em}\textbackslash renewfontfamily\textbackslash condensed\{SwissTeX Grotesk Condensed\}}\\
 \code{\hspace{1.5em}\textbackslash setmathfont\{TeX Gyre DejaVu Math\}\}}\\
-\code{\textbackslash swisslogofiles\{cover=acme-logo.pdf\}}\\
+\code{\textbackslash swisslogofiles\{cover=acme-logo.pdf, colophon=acme-logo.pdf\}}\\
 \code{\textbackslash swissclassifications\{public,internal,confidential,strict\}}\\
 \code{\textbackslash swissfootformat\{\textbackslash meta\{docid\} · \textbackslash meta\{version\} · \textbackslash meta\{date\}\}}
 \end{gridblock}
+% END acme-excerpt
 
 Ein Dokument, das diese Identität nutzt, trägt nur noch seine eigenen
 Angaben:
@@ -381,7 +440,7 @@ vollständig auf dem Seitenraster: weder das Farbband noch das
 \end{tabularx}
 \end{swisstable}
 
-\marg{Kein Seitenanteil mehr: Band und Zeichen hängen an Rasterzeilen}
+\marg{Kein Seitenanteil, nur Rasterzeilen}
 Das Farbband platziert seine Oberkante auf Rasterzeile \code{start} und
 seine Höhe auf \code{lines} Rasterzeilen, über die volle Seitenbreite; die
 Vorgabe \code{38/9} gilt, solange \code{band} nicht gesetzt wird. Beide
@@ -396,7 +455,18 @@ Vorgabezeichen mehr: Ohne \code{glyph=} erscheint gar keins. Ein Zeichen ist
 damit eine bewusste, identitätstragende Entscheidung, kein automatisches
 Ornament.
 
-\marg{Varianten legen Positionen fest, Dokumente füllen Inhalt}
+Die vier Stellschrauben der Vorversionen -- \code{\textbackslash
+swisscoverglyph}, \code{\textbackslash swisscoverglyphx},
+\code{\textbackslash swisscoverglyphy} und \code{\textbackslash
+swisscoverglyphsize} -- sind damit gegenstandslos. Sie bleiben definiert,
+haben aber keine Wirkung mehr und melden beim Aufruf eine Warnung, die auf
+den jeweiligen Ersatzschlüssel verweist: \code{glyph}, \code{glyphline}
+(zweimal, für die frühere Seitenanteilslage) und \code{glyphlines}. Ein
+schlichtes ``Command undefined'' wäre für ein altes Dokument härter als eine
+Warnung, und die Namen bleiben so für ein \code{\textbackslash renewcommand}
+in altem Präambelcode nutzbar.
+
+\marg{Variante: Lage. Dokument: Inhalt}
 \code{\textbackslash swisscovervariant\{Name\}\{Vorgaben\}} hinterlegt eine
 Schlüssel-Wert-Liste unter einem Variantennamen -- aus einer
 Identitätsdatei heraus (Abschnitt~\ref{sec:identitaet}) oder direkt in der
@@ -419,7 +489,7 @@ Varianten (etwa für ein Angebot oder einen internen Bericht) ist ebenso
 möglich; die Klasse schliesst kein Vokabular, sie liefert nur den
 Mechanismus.
 
-\marg{Die alte Positionsform warnt bereits in Version 2.0, nicht erst ab 2.1 wie bei \code{\textbackslash swisstitle}}
+\marg{Warnt schon in 2.0}
 Die alte Positionsform \code{\textbackslash
 swisscover\{Kennzeichnung\}\{Titel\}\{Untertitel\}\{Fuss\}} bleibt nutzbar,
 meldet aber schon jetzt eine Warnung beim Bau, nicht erst ab einer
@@ -429,13 +499,17 @@ dieser Überarbeitung deshalb mit der Slot-Form.
 \subsection{Fusszeile}
 \label{sec:fusszeile}
 
-\marg{Kein Logo im Kolumnentitel: eine wiederholte Marke informiert einmal, jede weitere Wiederholung ist nur noch Werbung}
+\marg{Kein Logo im Kolumnentitel}
 Kopf- und Fusszeile teilen sich dieselbe Rastergeometrie und dieselbe
-Zurückhaltung. Der Kolumnentitel trägt links die Pagina im Grundschriftgrad
-in der Signalfarbe und rechts den mit \code{\textbackslash setrunningtitle}
-gesetzten Lauftitel in der Schmalschrift auf Kennzeichnungsgrad -- kein
-Logo; das bleibt Umschlag und Kolophon vorbehalten
-(Abschnitt~\ref{sec:umschlag}). \code{headsep} bindet den Kopf an
+Zurückhaltung. Der Kolumnentitel trägt links die Pagina -- seit Version 2.0 im
+Grundschriftgrad statt in einem eigenen, kleineren Grad, weil die Seitenzahl
+nach Müller-Brockmann auf einer Textzeile sitzt und wie der Text bemessen ist
+-- in der Signalfarbe, und rechts den mit \code{\textbackslash
+setrunningtitle} gesetzten Lauftitel in der Schmalschrift auf
+Kennzeichnungsgrad. Kein Logo: Eine wiederholte Marke informiert einmal, jede
+weitere Wiederholung ist nur noch Werbung; die Marke bleibt Umschlag und
+Kolophon vorbehalten (Abschnitt~\ref{sec:umschlag},
+Abschnitt~\ref{sec:identitaet}). \code{headsep} bindet den Kopf an
 \code{2\textbackslash gridunit}, \code{footskip} den Fuss an
 \code{3\textbackslash gridunit} -- beide Grundlinien liegen auf derselben
 verlängerten Rasterzeile wie der Grundtext, geprüft von swisscheck A10 und
@@ -445,7 +519,16 @@ Die Fusszeile trägt zwei getrennte Zonen: links, in der Marginalspalte, die
 Klassifizierungsmarke, rechts, ab der Textachse, eine Metazeile aus
 Dokumentangaben. Die Marke erscheint nur ab der Klassifizierungsstufe
 \code{internal} aufwärts -- Schweigen ist der öffentliche Zustand, keine
-sichtbare Markierung für die niedrigste Stufe. Die Metazeile kommt aus
+sichtbare Markierung für die niedrigste Stufe. Massgeblich ist dabei nicht
+der Name, sondern die Stelle im Vokabular: Gedruckt wird ab Index 1, also ab
+dem zweiten Eintrag von \code{\textbackslash swissclassifications}. Ein
+eigenes Vokabular setzt seine öffentlichste Stufe deshalb an den Anfang, sonst
+trägt sie eine Marke. Und weil die Marke in der Marginalspalte steht und ein
+Kasten nicht beschneidet, hält die Klasse sie von sich aus in deren Breite:
+Passt die gesperrte Versalmarke nicht in \code{margincolumn} -- was
+``Streng vertraulich'' und ``Strictly confidential'' tatsächlich nicht tun --,
+nimmt sie in festen Stufen erst die Sperrung, dann den Grad zurück, statt in
+den Bund zu laufen. Die Metazeile kommt aus
 \code{\textbackslash swissfootformat\{...\}} (Abschnitt~\ref{sec:identitaet}):
 eine mit \code{\textbackslash meta\{key\}} formulierte Vorlage, die erst
 beim tatsächlichen Fusssatz an die Dokumentangaben aus
@@ -470,8 +553,11 @@ statt auf die Kopfzeile:
 \code{\textbackslash end\{swisstable\}}
 \end{gridblock}
 
-\marg{\code{tabularx} lässt sich nicht in eine eigene Umgebung wickeln, weil es seinen Rumpf bis zum wörtlichen Ende einliest}
-Bereitgestellt sind die Spaltentypen \code{L} (dehnbar, Flattersatz),
+\marg{\code{tabularx} ist nicht wickelbar}
+\code{tabularx} lässt sich nicht in eine eigene Umgebung wickeln, weil es
+seinen Rumpf bis zum wörtlichen \code{\textbackslash end\{tabularx\}}
+einliest; deshalb steht es hier ausgeschrieben statt hinter einer eigenen
+Hülle. Bereitgestellt sind die Spaltentypen \code{L} (dehnbar, Flattersatz),
 \code{S\{Breite\}} (fest, Flattersatz) und \code{R\{Breite\}}
 (fest, rechtsbündig) sowie \code{\textbackslash tabhead} für die Kopfzeile.
 Senkrechte Linien sind nicht vorgesehen.
@@ -480,13 +566,15 @@ Senkrechte Linien sind nicht vorgesehen.
 
 \subsection{Automatischer Rasterfang}
 
-\marg{Der Fang muss nach dem Schlusscode der Umgebung greifen, nicht davor}
+\marg{Fang greift nach dem Schlusscode}
 Umgebungen aus LaTeX und aus Paketen bringen eigene Abstände mit. Für
 \code{quote}, \code{quotation}, \code{verbatim}, \code{description} und die
 abgesetzten Formelumgebungen von \code{amsmath} setzt die Klasse deshalb
-\code{\textbackslash gridsnap} automatisch dahinter. Der Fang liest
-\code{\textbackslash pagetotal}, füllt auf die nächste Rasterzeile auf und
-setzt die Tiefe für den folgenden Zeilenausgleich.
+\code{\textbackslash gridsnap} automatisch dahinter -- dahinter, nicht davor:
+Der Fang muss nach dem Schlusscode der Umgebung greifen, sonst rechnet er noch
+vor deren eigenem Abstand. Der Fang liest \code{\textbackslash pagetotal},
+füllt auf die nächste Rasterzeile auf und setzt die Tiefe für den folgenden
+Zeilenausgleich.
 
 Damit brauchen abgesetzte Formeln kein \code{gridblock} mehr. Für eigene
 oder fremde Umgebungen, die noch nicht erfasst sind, genügt ein Aufruf von
@@ -507,7 +595,7 @@ den Absatz hinein.
 
 \subsection{Anzeigengrade}
 
-\marg{Auch Schaugrade bleiben am Raster: der Durchschuss ist ein Vielfaches, der Grad folgt daraus}
+\marg{Schaugrade bleiben am Raster}
 \code{\textbackslash swissdisplay\{n\}} setzt einen Grad mit n Rasterzeilen
 Durchschuss. Der Schriftgrad wird daraus abgeleitet, ab drei Zeilen läuft die
 Schrift enger, wie im Schaugebrauch der Grotesk üblich.
@@ -543,7 +631,7 @@ Klassenoption setzen: \code{paper}, \code{accent}, \code{band}, \code{ink}.
 
 \subsection{Blindzeile über dem Farbfeld}
 
-\marg{Satzblock und Farbfläche sind zwei verschiedene Dinge und brauchen zwei verschiedene Abstände}
+\marg{Satzblock und Fläche: zwei Abstände}
 Ein Satzblock beginnt mit einer Textzeile, deren Grundlinie ins Raster
 gehört; über ihr steht die Oberlänge als optischer Abstand. Eine Farbfläche
 hat keine Oberlänge, ihre Kante ist die Kante. Wird sie wie ein Satzblock
@@ -570,20 +658,21 @@ auf. Das beiliegende Skript misst deshalb die fertige PDF-Datei:
 \code{python3 swisscheck.py bericht.pdf -{}-tex bericht.tex}
 \end{gridblock}
 
-Geprüft werden Achsentreue der Linien, Rasterbindung des Grundtexts gegen die
-Satzoberkante, rechte Satzkante, Marginalspalte und Bund, Legendenflucht der
-Tabellen, Überschriften am Seitenfuss, die beiden Zonen der Marginalspalte
-sowie Zeilenanfänge ohne Einzug. Die Kennzahlen lassen sich per
-Schalter an ein abweichendes Raster anpassen.
+Geprüft werden Achsentreue der Linien (A1), Rasterbindung des Grundtexts gegen
+die Satzoberkante (A2), rechte Satzkante (A3), Marginalspalte und Bund (A4),
+Legendenflucht der Tabellen (A5), Überschriften am Seitenfuss (A6), die beiden
+Zonen der Marginalspalte (A7), Zeilenanfänge ohne Einzug (A8) sowie die Flucht
+der Abbildungslegende mit der Abbildungsoberkante (A9). Die Kennzahlen lassen
+sich per Schalter an ein abweichendes Raster anpassen.
 
-\marg{Ein häufiger Stolperstein bei eigenen Prüfungen: PDF rechnet in DTP-Punkt, TeX in TeX-Punkt}
+\marg{PDF: DTP-Punkt, TeX: TeX-Punkt}
 Wer eigene Messungen anstellt, muss zwischen TeX-Punkt und DTP-Punkt
 umrechnen. Ohne diesen Faktor erscheint jedes korrekte Raster als langsam
 wegdriftend, mit etwa 0,05\,pt je Zeile.
 
 \subsection{Kennzahlen-Sidecar}
 
-\marg{Die Sidecar-Datei prüft rückwirkend auch A1 bis A9: sobald sie vorliegt, gelten deklarierte Kennzahlen statt Kommandozeilen-Vorgaben}
+\marg{Sidecar gilt auch für A1 bis A9}
 Seit Version 2.0 schreibt die Klasse \code{\textbackslash AtEndDocument}
 eine zweite, kleine Datei neben die PDF: \code{<jobname>.swisscheck}, eine
 Zeile \code{schlüssel=wert} je Kennzahl -- Rastermass, die drei
@@ -599,22 +688,53 @@ Liegt eine Sidecar-Datei vor, lesen auch die ursprünglichen neun Prüfungen
 ihre Kennzahlen aus ihr, nicht aus den Kommandozeilen-Vorgaben. Fehlt die
 Datei -- etwa bei einer älteren, vor Version 2.0 gebauten PDF --, fällt
 swisscheck für A1 bis A9 auf seine bisherigen Vorgaben zurück und
-überspringt die sechs neuen Prüfungen sauber, ohne einen Verstoss zu
-melden.
+überspringt die sieben sidecar-gebundenen Prüfungen sauber, ohne einen
+Verstoss zu melden.
 
-Sechs neue Prüfungen kommen damit hinzu: die Fusszeile auf dem
+Sieben Prüfungen kommen damit hinzu: die Fusszeile auf dem
 Rasterfusspunkt mit ihren beiden Zonen (A10, Abschnitt~\ref{sec:fusszeile}),
-der Kolumnentitel mit der Pagina im Grundschriftgrad und einer bildfreien
-Kopfzone (A11), der Umschlag mit dem Farbband auf Rasterzeilen und
-Schriftgraden aus der Anzeigenskala (A12, Abschnitt~\ref{sec:umschlag}), die
-Kommensurabilität des Nebentext-Durchschusses in der Marginalspalte gegen
-die drei deklarierten Kennzahlen (A13), die Unterscheidbarkeit eines
-eigenständigen Bandtons von der Signalfarbe (A15) sowie das
-Schriftinventar der eingebetteten Schriften gegen die deklarierten
-Familien (A16). A14, die Prüfung für zweisprachigen Satz, ist für eine
-spätere Ausbaustufe vorgesehen und heute nicht implementiert.
+der Kolumnentitel mit der Pagina im Grundschriftgrad, ihrer Grundlinie auf
+der verlängerten Rasterzeile und einer bildfreien Kopfzone (A11), der
+Umschlag mit dem Farbband auf Rasterzeilen, Schriftgraden aus der
+Anzeigenskala und der Verankerung des Überformatzeichens (A12,
+Abschnitt~\ref{sec:umschlag}), die
+Kommensurabilität des Nebentext-Durchschusses (A13), die Farbrollen (A15),
+das Schriftinventar der eingebetteten Schriften gegen die deklarierten
+Familien (A16) sowie die Länge der Randglossen (A17). A14, die Prüfung für
+zweisprachigen Satz, ist für eine spätere Ausbaustufe vorgesehen und heute
+nicht implementiert.
+
+Drei davon prüfen zwei Dinge statt einem. A11 misst nicht nur den Grad der
+Pagina, sondern auch, ob ihre Grundlinie wirklich auf der verlängerten
+Rasterzeile sitzt -- das fand 3,587\,pt Versatz in allen drei
+Referenzdokumenten. A13 prüft nicht nur, ob der gemessene Durchschuss zu
+einer deklarierten Kennzahl passt, sondern auch, ob diese Kennzahl selbst ein
+kleiner Bruch des Rastermasses ist; sonst bestünde eine in sich stimmige,
+aber unkommensurable Erklärung die Prüfung. A15 misst die Füllfarbe des
+gedruckten Farbbands gegen den deklarierten Ton, statt auf dem Vorgabepfad
+(eine Signalfarbe) gar nichts zu messen. A17 schliesslich meldet jeden
+zusammenhängenden Glossenblock über sechs Zeilen: Die Marginalspalte trägt
+Beschriftung, nicht Fliesstext (I3).
 
 \subsection{Grenzen}
+
+\marg{22\,mm tragen rund zwölf Zeichen}
+Die Marginalspalte trägt Beschriftung, nicht Fliesstext -- diese Invariante
+(I3) hat eine Konsequenz, die man beim Schreiben leicht übersieht. Die
+Glossenzone ist 22\,mm breit; auf ihr stehen in jeder Schrift rund zwölf
+Zeichen je Zeile. Die Lesbarkeitsschwelle, die Müller-Brockmann für laufenden
+Satz nennt, liegt weit darüber und ist auf dieser Breite mit keiner Schrift
+zu erreichen. Daraus folgt nicht, dass die Spalte breiter oder die Glosse
+schmalgesetzt werden müsste, sondern dass eine Glosse gar kein laufender Satz
+sein darf: Sie ist ein Etikett von Etikettenlänge, wenige Zeilen lang, und
+alles darüber gehört in den Grundtext. Die Glossen dieses Handbuchs sind auf
+genau dieses Mass zurückgeschnitten worden, ihre Begründungen stehen im
+Fliesstext daneben; swisscheck A17 hält den Zustand fest (kein Glossenblock
+über sechs Zeilen). Randglossen laufen dabei seit Version 2.0 in der
+normalen Weite der Grundschrift, nicht in der Schmalschrift -- eine
+schmalere Schrift brächte auf 22\,mm zwei, drei Zeichen mehr je Zeile und
+löste das Problem nicht, kostete aber die Lesbarkeit, auf die es gerade
+ankommt.
 
 Die Rasterbindung gilt für Grundtext. Tabellenkörper und Fussnoten laufen
 bewusst in der Schmalschrift auf eigenem, engerem Durchschuss; Randglossen

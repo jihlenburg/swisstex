@@ -1,0 +1,24 @@
+gridunit=13.5pt
+bodysize=9.5pt
+annotationleading=9.0pt
+glossleading=10.125pt
+footnoteleading=10.125pt
+headsep=27.0pt
+footskip=40.5pt
+outermargin=24mm
+margincolumn=30mm
+gutter=7mm
+numberzone=8mm
+textcolumn=105mm
+topmargin=26mm
+gridlines=51
+accent=255,55,37
+band=accent
+paper=234,232,208
+ink=26,26,26
+mainfamily=texgyreheros
+condensedfamily=texgyreheroscn
+mathfont="TeXGyreDejaVuMath-Regular/OT:script=math;language=dflt;" at 9.5pt
+logofonts=
+classification=none
+docid=

@@ -1,0 +1,8 @@
+% C2: foot=\meta{...} auf \swisscover*. Die vier \edef-Proben, die
+% entscheiden, ob die Umschlag-Fusszeile ueberhaupt erscheint, laufen vor
+% dem eigentlichen Fusssatz -- \meta muss darum schon dort gebunden sein.
+\documentclass{swisstex}
+\swissmeta{docid=Q-42, version=3.1}
+\begin{document}
+\swisscover*{kicker=Angebot, title=Probe, foot=\meta{docid} \textbar{} \meta{version}}
+\end{document}

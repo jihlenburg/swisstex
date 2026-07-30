@@ -1,0 +1,15 @@
+% C6: Vorgabe-Schriftanbieter (TeX Gyre Heros) PLUS eine Logodatei, die
+% ihre eigene, fremde Schrift mitbringt (acme-logo.pdf ist in SwissTeX
+% Grotesk gesetzt). Ohne die Erklaerung ueber logofonts= meldet swisscheck
+% A16 die Logoschrift zu Recht als undeklarierte Familie; mit ihr ist sie
+% eine benannte, gepruefte Ausnahme.
+\documentclass{swisstex}
+\setrunningtitle{Fixture}
+\swisslogofiles{cover=acme-logo.pdf, logofonts={SwissTeX Grotesk}}
+\begin{document}
+\swisslogo[lines=2]{acme-logo.pdf}
+
+\section{Abschnitt}
+Grundtext auf dem Raster. Ein Absatz mit genug Woertern fuer zwei Zeilen
+Flattersatz und Trennung im Basisraster der Klasse.
+\end{document}

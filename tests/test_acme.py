@@ -113,3 +113,94 @@ def test_acme_logo_pdf_exists_and_is_single_page():
     assert logo.exists(), logo
     with pdfplumber.open(logo) as p:
         assert len(p.pages) == 1
+
+
+# --- C4: \swissidentitymeta und der colophon=-Slot sind keine tote Konfiguration ---
+
+def test_acme_colophon_carries_identity_line(tmp_path):
+    # \swissidentitymeta (company/legal/web) und der colophon=-Schlüssel von
+    # \swisslogofiles waren bis zu dieser Änderung zwar setzbar, aber von
+    # keiner Stelle der Klasse gelesen. Das Kolophon liest jetzt beides --
+    # acme-demo ist der End-zu-End-Beleg, weil seine Identität beide setzt.
+    r = build_doc(DOC, tmp_path)
+    assert r.returncode == 0, r.log[-3000:]
+    with pdfplumber.open(r.pdf) as p:
+        letzte = (p.pages[-1].extract_text() or "").replace(" ", "")
+    assert "AcmeAG" in letzte, letzte
+    assert "HRB12345" in letzte, letzte
+    assert "acme.example" in letzte, letzte
+
+
+def test_acme_colophon_carries_the_mark(tmp_path):
+    # Die Marke steht rechtsbündig auf dem vollen Mass, eine Rasterzeile
+    # hoch. acme-logo.pdf ist Vektorgrafik und landet als Form-XObject, dessen
+    # Inhalt pdfplumber als gewöhnliche Zeichen aufschlüsselt (siehe die
+    # Begründung in swisscheck.py bei A11) -- geprüft wird darum die Lage des
+    # Markentexts, nicht ein image-Eintrag.
+    r = build_doc(DOC, tmp_path)
+    assert r.returncode == 0, r.log[-3000:]
+    mm, pt = 72 / 25.4, 72 / 72.27
+    rechte_kante = (24.0 + 30.0 + 7.0 + 105.0) * mm      # volles Mass
+    # Die Logodatei hat rechts von ihrem Satz einen eigenen Rand. Rechts-
+    # bündig heisst: die rechte Kante der DATEI liegt auf dem vollen Mass --
+    # der Markentext endet um genau diesen (mitskalierten) Dateirand davor.
+    # Der Erwartungswert wird darum aus der Quelldatei berechnet, statt eine
+    # grosszügige Toleranz zu raten.
+    with pdfplumber.open(ROOT / "acme-logo.pdf") as q:
+        quelle = q.pages[0]
+        breit = [w for w in quelle.extract_words()
+                 if w["text"].upper().startswith("ACME")]
+        assert breit, "acme-logo.pdf enthaelt keinen Markentext"
+        rand_quelle = quelle.width - max(w["x1"] for w in breit)
+        hoehe_quelle = quelle.height
+    skala = (13.5 * pt) / hoehe_quelle                   # Zielhöhe = 1 Rasterzeile
+    with pdfplumber.open(r.pdf) as p:
+        seite = p.pages[-1]
+        marken = [w for w in seite.extract_words()
+                  if w["text"].upper().startswith("ACME")
+                  and w["top"] > seite.height / 2]
+    assert marken, "keine Kolophonmarke auf der letzten Seite"
+    unterste = max(marken, key=lambda w: w["top"])
+    erwartet = rechte_kante - rand_quelle * skala
+    assert abs(unterste["x1"] - erwartet) < 1.0, (unterste, erwartet, rechte_kante)
+
+
+def test_colophon_without_identity_stays_unchanged(tmp_path):
+    # Gegenprobe: ohne Identität gibt es weder Identitätszeile noch Marke --
+    # die Erweiterung darf ein Dokument ohne identity= nicht verändern.
+    fx = tmp_path / "plaincolo.tex"
+    fx.write_text(r"""\documentclass{swisstex}
+\begin{document}
+\section{Abschnitt}
+Grundtext auf dem Raster mit genug Woertern fuer eine volle Zeile.
+\colophon{Nur der eigene Text.}
+\end{document}""")
+    r = build_doc(fx, tmp_path)
+    assert r.returncode == 0, r.log[-3000:]
+    with pdfplumber.open(r.pdf) as p:
+        # 7 pt Schmalschrift: der Wortabstand liegt unter pdfplumbers
+        # Vorgabetoleranz, extract_text klebt die Wörter zusammen. Verglichen
+        # wird darum die leerzeichenfreie Form (wie in tests/test_strings.py).
+        text = (p.pages[-1].extract_text() or "").replace(" ", "")
+    assert "NurdereigeneText." in text, text
+    schwanz = text.split("NurdereigeneText.")[-1]
+    assert "·" not in schwanz, schwanz
+    assert "ACME" not in schwanz, schwanz
+
+
+def test_missing_colophon_logo_warns_but_builds(tmp_path):
+    # Ein Kolophon ist Beiwerk: eine fehlende Markendatei darf den Bau eines
+    # fertigen Dokuments nicht abbrechen (anders als bei \swisslogo, wo die
+    # Datei ausdrücklich angefordert wurde).
+    fx = tmp_path / "nomark.tex"
+    fx.write_text(r"""\documentclass{swisstex}
+\swisslogofiles{colophon=gibtsnicht.pdf}
+\begin{document}
+\section{Abschnitt}
+Grundtext auf dem Raster mit genug Woertern fuer eine volle Zeile.
+\colophon{Text ohne Marke.}
+\end{document}""")
+    r = build_doc(fx, tmp_path)
+    assert r.returncode == 0, r.log[-3000:]
+    assert "Colophon logo" in r.log, r.log[-3000:]
+    assert "Division by 0" not in r.log, r.log[-3000:]

@@ -66,3 +66,33 @@ def test_footformat_stored_unexpanded(tmp_path):
     r = build_doc(ROOT / "tests/fixtures/identity.tex", tmp_path)
     assert r.returncode == 0, r.log[-2000:]
     assert "Undefined control sequence" not in r.log
+
+
+def test_classifications_after_meta_revalidate(tmp_path):
+    # D5: \swissclassifications darf eine bereits gesetzte Klassifizierung
+    # nicht stehen lassen, die auf das ALTE Vokabular zeigt -- sonst trüge
+    # die Fusszeile die Marke einer Stufe, die es nicht mehr gibt.
+    fx = tmp_path / "stale.tex"
+    fx.write_text(r"""\documentclass{swisstex}
+\swissmeta{classification=confidential}
+\swissclassifications{public,internal}
+\begin{document}x\end{document}""")
+    r = build_doc(fx, tmp_path)
+    assert r.returncode != 0, r.log[-2000:]
+    assert "Unknown classification" in r.log, r.log[-3000:]
+
+
+def test_classifications_before_meta_still_works(tmp_path):
+    # Gegenprobe: die übliche Reihenfolge (Vokabular zuerst) darf durch die
+    # Nachprüfung nicht kaputtgehen -- und ohne gesetzte Klassifizierung ist
+    # der zusätzliche Aufruf ein No-op.
+    fx = tmp_path / "order.tex"
+    fx.write_text(r"""\documentclass{swisstex}
+\swissclassifications{open,restricted}
+\swissstringkeys{classification-open, classification-restricted}
+\swisssetstrings{german}{classification-open=Offen,
+  classification-restricted=Gesperrt}
+\swissmeta{classification=restricted}
+\begin{document}x\end{document}""")
+    r = build_doc(fx, tmp_path)
+    assert r.returncode == 0, r.log[-3000:]

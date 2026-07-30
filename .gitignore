@@ -4,8 +4,14 @@
 *.out
 *.toc
 *.swisscheck
+# Ausnahme: die Kennzahlen-Sidecar-Dateien der drei Referenzdokumente werden
+# NEBEN ihren PDFs mitversioniert. Ohne sie prüfte ein frischer Klon die
+# mitgelieferten PDFs nur gegen A1-A9 und überspränge A10-A17 stillschweigend
+# -- die Sidecar-Datei ist Teil des geprüften Artefakts, nicht Baumüll.
+!swisstex-manual.swisscheck
+!swisstex-demo.swisscheck
+!acme-demo.swisscheck
 fonts/.venv/
 fonts/build/
 __pycache__/
-tests/__pycache__/
 *.pyc

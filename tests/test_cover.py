@@ -285,3 +285,70 @@ def test_cover_fixture_passes_swisscheck(tmp_path):
     assert r.returncode == 0, r.log[-2000:]
     code, out = swisscheck(r.pdf)
     assert code == 0, out
+
+
+# --- A3: Überformatzeichen ist kein Anzeigengrad ---------------------------
+
+def test_glyph_cover_passes_swisscheck(tmp_path):
+    # Das Zeichen misst 34 Rasterzeilen (459 pt) und fiel damit durch A12s
+    # Grössenregel ("ausserhalb der Anzeigenskala"). Es ist aber gar kein
+    # Anzeigengrad, sondern ein aus dem Raster abgeleitetes Überformat; A12
+    # nimmt es von der Grössenregel aus und prüft statt dessen seine
+    # Verankerung (Grundlinie auf Rasterzeile, linke Kante auf der Textachse).
+    r = build_doc(ROOT / "tests/fixtures/glyph-cover.tex", tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    code, out = swisscheck(r.pdf)
+    assert code == 0, out
+    a12 = next(z for z in out.splitlines() if z.strip().startswith("A12"))
+    assert "ok" in a12, a12
+    assert "(0 geprüft)" not in a12, a12
+
+
+def test_glyph_anchor_measured_on_grid_and_axis(tmp_path):
+    r = build_doc(ROOT / "tests/fixtures/glyph-cover.tex", tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    with pdfplumber.open(r.pdf) as p:
+        page = p.pages[0]
+        gross = [c for c in page.chars if c["size"] > 8 * GRIDUNIT_PT * PT]
+        assert len(gross) == 1, sorted({round(c["size"], 1) for c in page.chars})
+        c = gross[0]
+        grundlinie = page.height - c["matrix"][5]
+    abstand = grundlinie - TOPMARGIN_MM * MM
+    rest = abstand % (GRIDUNIT_PT * PT)
+    assert min(rest, GRIDUNIT_PT * PT - rest) < 0.6, grundlinie
+    innermargin = (24.0 + 30.0 + 7.0) * MM
+    assert abs(c["x0"] - innermargin) < 0.6, c["x0"] / MM
+
+
+def test_glyph_baseline_off_grid_is_caught(tmp_path):
+    # Deckungstest für die neue Regel selbst: eine halbe Rasterzeile Versatz
+    # gibt es über glyphline= nicht (ganzzahlig), wohl aber über einen
+    # abweichenden topmargin bei sonst gleichem Aufruf -- das Zeichen hängt
+    # dann zwar an derselben Rasterzeile wie zuvor, aber der Sidecar-Wert
+    # topmargin verschiebt den Bezugspunkt. Geprüft wird also, dass A12 die
+    # Verankerung wirklich MISST und nicht nur zählt.
+    r = build_doc(ROOT / "tests/fixtures/glyph-cover.tex", tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    side = tmp_path / "verschoben.swisscheck"
+    quelle = (tmp_path / "glyph-cover.swisscheck").read_text()
+    side.write_text(quelle.replace("topmargin=26mm", "topmargin=28mm"))
+    code, out = swisscheck(r.pdf, "--params", str(side))
+    assert code != 0, out
+    assert "Zeichen-Grundlinie" in out or "Zeichen-Linkskante" in out, out
+
+
+# --- C2: foot=\meta{...} auf \swisscover* ---------------------------------
+
+def test_cover_foot_accepts_meta_placeholder(tmp_path):
+    # Die vier \edef-Proben, die entscheiden, ob die Umschlag-Fusszeile
+    # überhaupt gesetzt wird, laufen VOR dem Fusssatz. \meta war bis zu
+    # dieser Änderung erst danach gebunden -- ein foot=\meta{docid} (die
+    # dokumentierte Schreibweise, dieselbe wie in \swissfootformat) starb
+    # dort an "Undefined control sequence".
+    r = build_doc(ROOT / "tests/fixtures/covermeta.tex", tmp_path)
+    assert r.returncode == 0, r.log[-3000:]
+    assert "Undefined control sequence" not in r.log, r.log[-3000:]
+    with pdfplumber.open(r.pdf) as p:
+        text = (p.pages[0].extract_text() or "").replace(" ", "")
+    assert "Q-42" in text, text
+    assert "3.1" in text, text
