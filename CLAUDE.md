@@ -4,23 +4,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`swisstex.cls` is a single-file XeLaTeX document class for non-fiction texts set to the
-typographic rules of the Neue Schweizer Schule (Müller-Brockmann): a baseline grid, one type
-family, a margin column that carries only labels. `swisstex-manual.tex` is both the reference
-documentation and the largest test case — it is typeset with the class itself. `swisstex-demo.tex`
-is a short conformance sample with the grid overlay switched on. `swisscheck.py` measures a built
-PDF against the invariants (see Verify below).
+`swisstex.cls` is a XeLaTeX document class for non-fiction texts set to the typographic rules of
+the Neue Schweizer Schule (Müller-Brockmann): a baseline grid, one type family, a margin column
+that carries only labels. Since v2.0 the class is no longer the whole story by itself — it is the
+sole *enforcement point* of a small identity layer: a document adds `identity=<name>` to load
+`swissidentity-<name>.sty`, a package that sets colour roles, fonts, logo files, classification
+vocabulary and the foot-line template through public setters only (`\swissidentitymeta`,
+`\swisssetcolors`, `\swissidentityfonts`, `\swisslogofiles`, `\swissclassifications`,
+`\swissfootformat`, `\swisscovervariant`), never by patching the class (see "The identity layer"
+below). `swissidentity-acme.sty` is the reference identity — `acme` is a neutral placeholder, never
+a real company — and `acme-demo.tex`/`acme-demo.pdf` is its worked example, exercising every public
+setter end to end. `swisstex-manual.tex` is both the reference documentation and the largest test
+case — it is typeset with the class itself, in two passes (see Build below). `swisstex-demo.tex` is
+a short conformance sample with the grid overlay switched on. `swisscheck.py` measures a built PDF
+against the invariants (see Verify below); `tests/` is a pytest harness that builds every reference
+document and fixture and checks both the PDF output and the class's error paths (see Tests below).
 
-There is no build system or package manager — just the class, the two documents, their built PDFs,
-and the check script. Note that only `LICENSE` is tracked in git so far — the sources and PDFs are
-still untracked in the working tree.
+There is no build system or package manager beyond a base TeX Live plus the Python packages
+`swisscheck.py` and the tests need (see `fonts/.venv`). The whole working tree is tracked in git —
+class, identity file, all three reference documents and their built PDFs, the check script, the test
+suite — this file used to say only `LICENSE` was tracked; that stopped being true early in the v2.0
+rewrite and the statement was simply never corrected until now.
 
 ## Build
 
 ```bash
-xelatex -interaction=nonstopmode swisstex-manual.tex   # run twice: hyperref bookmarks settle on pass 2
+xelatex -interaction=nonstopmode swisstex-manual.tex   # run twice, see below
 xelatex -interaction=nonstopmode swisstex-demo.tex
 ```
+
+The manual's two passes are not just hyperref bookmarks settling: since v2.0 it carries real
+`\ref`/`\label` cross-references (the Identität and Sprachen sections reference each other). A
+single pass leaves `Abschnitt??` in the PDF and a `Reference ... undefined` warning in the log —
+this exact regression happened once (Task 5 fix round 1) and is now caught by a machine net:
+`tests/conftest.py`'s `assert_clean_refs` helper, wired into `tests/test_swisscheck.py`'s manual
+build and into `tests/test_acme.py` (acme-demo has no refs of its own, so it should always come out
+clean in one pass — see Tests below). `swisstex-demo.tex` and `acme-demo.tex` have no cross-refs
+and build cleanly in one pass.
 
 XeLaTeX is mandatory — the class calls `\RequireXeTeX` and uses `fontspec`/`unicode-math`. pdflatex
 and lualatex will not work.
@@ -35,10 +55,25 @@ python3 swisscheck.py swisstex-manual.pdf --tex swisstex-manual.tex
 fidelity of rules (A1), baseline-grid binding measured absolutely from the page top (A2), right
 text edge (A3), margin column and gutter kept clean (A4), table-legend alignment (A5), no heading
 at the page foot (A6, needs `--tex`), the two margin zones (A7), no accidental indent at line
-starts (A8), figure-legend alignment (A9). Exit code 0 = clean, 1 = violations. Non-default grids
-are passed with `--gridunit`, `--textcolumn`, etc. Run it after any change that touches spacing or
-placement — hand-set spacing and a forgotten `[t]` only show up in the output, never in the source.
-`showgrid=true` remains the quick visual check.
+starts (A8), figure-legend alignment (A9).
+
+Since v2.0 the class also writes a Kennzahlen sidecar, `<jobname>.swisscheck` (written
+`\AtEndDocument`), with its *resolved* metrics: grid unit, the three ancillary leadings
+(`\annotationleading`/`\glossleading`/`\footnoteleading`), zones, colour roles, font families,
+classification, docid. `swisscheck.py` auto-discovers `<pdf-stem>.swisscheck` next to the PDF (or
+takes one via `--params`) and, when found, checks against those *declared* values instead of
+hard-coded constants — for A1-A9 too, not only the checks below. Six more checks then activate: the
+foot baseline and its two zones (A10), the head's pagina grade and image-free head zone (A11), the
+cover's band position and display-scale grades (A12), commensurability of the ancillary leadings as
+actually measured in the margin column (A13), a self-declared band colour's distinctness from the
+signal colour (A15), and the embedded font inventory against the declared families (A16) — A14
+(bilingual setting) is not implemented yet. Without a sidecar (older PDFs) these six skip cleanly (0
+checked, never a violation) and A1-A9 fall back to the CLI/default constants, exactly as in v1.
+
+Exit code 0 = clean, 1 = violations. Non-default grids are passed with `--gridunit`, `--textcolumn`,
+etc. — only load-bearing for sidecar-less PDFs; a discovered sidecar overrides them. Run it after
+any change that touches spacing or placement — hand-set spacing and a forgotten `[t]` only show up
+in the output, never in the source. `showgrid=true` remains the quick visual check.
 
 Prerequisites beyond a base TeX Live: `tex-gyre` (the TeX Gyre Heros text fonts, used as the Univers
 analogue), `tex-gyre-math` (supplies `texgyredejavu-math.otf`, family name `TeX Gyre DejaVu Math`),
@@ -52,10 +87,31 @@ texmf tree), but the math fonts by *family name* (`\setmathfont`), and XeTeX on 
 through CoreText, which cannot see texmf trees. The name-looked-up fonts — `texgyreheros-*.otf` (for
 the `range=\mathup`/`\mathit` loads) and `texgyredejavu-math.otf` — must therefore also be copied to
 `~/Library/Fonts/`. Without that, the build dies at `\setmathfont` with fontspec's "font cannot be
-found" even though `kpsewhich` resolves the files.
+found" even though `kpsewhich` resolves the files. An identity's `\swissidentityfonts` provider hits
+the same quirk for the *body* font too if it loads by family name instead of filename:
+`swissidentity-acme.sty` calls `\setmainfont{SwissTeX Grotesk}` (no `Extension=`/`UprightFont=`
+features, unlike the class's own filename-based default), so `fonts/dist/SwissTeXGrotesk*.ttf` must
+likewise sit in `~/Library/Fonts/` for the acme identity and `acme-demo.tex` to build.
 
 Build artefacts (`.aux`, `.log`, `.out`) are not gitignored — build in a scratch directory, or clean
 up afterwards.
+
+## Tests
+
+```bash
+fonts/.venv/bin/pytest tests/ -q
+```
+
+Use the pytest inside `fonts/.venv` (it carries `pdfplumber`); a bare system `pytest` will not have
+it. The suite (`tests/test_acme.py`, `test_cover.py`, `test_doctrine.py`, `test_fonts.py`,
+`test_foot.py`, `test_identity.py`, `test_strings.py`, `test_swisscheck.py`, `test_title.py`) builds
+every reference document and fixture with `xelatex` under `tests/conftest.py`'s `build_doc` helper
+(`cwd=ROOT`, output redirected to a `tmp_path`, `TEXINPUTS` gains `tests/fixtures//` so identity
+`.sty` fixtures resolve) and asserts against the resulting PDF/log/sidecar, not just a returncode —
+this is what actually enforces class behaviour beyond what `swisscheck.py` measures (error paths,
+font substitution, string fallback, and so on). It is slow (xelatex per test, ~60-70s total) because
+each assertion wants a real build, not a mock. Run the whole suite after any class change; run a
+single file (`fonts/.venv/bin/pytest tests/test_cover.py -q`) while iterating on one feature.
 
 ## The design contract: six invariants
 
@@ -73,6 +129,16 @@ one against the mechanism that enforces it. They are the review criteria for any
 Concretely this means: **never write a hand-tuned `\vspace` or a bare length in points.** Express
 vertical space as `\gridskip{n}` or `n\gridunit`, and horizontal measures in terms of the derived
 lengths below.
+
+The v2.0 derivation doctrine sorts every measure into exactly one of three classes (never mix
+them): **vertical rhythm** (skips, seps, kerns, and *every* leading) is always `\gridunit`-derived —
+including the three overridable ancillary leadings `\annotationleading` (⅔ `\gridunit`),
+`\glossleading` and `\footnoteleading` (¾ `\gridunit` each), which fall back to those ratios only
+when their class option is left empty; **grades** are role Kennzahlen (`\swissdisplay{n}`'s size,
+the body size), never grid functions — the book chooses sizes for unmistakable contrast, not a
+formula; **stroke weights** are named Kennzahlen (`0.4pt` hairline, `1.2pt` title rule), never
+grid-derived. `swisscheck` A13 verifies the first class holds in the built PDF, not just in the
+source.
 
 ## Architecture
 
@@ -96,6 +162,36 @@ geometry right   = paperwidth - innermargin - textcolumn
 The consequence: to change the page, change a class option — do not adjust `\geometry` or individual
 lengths. Adding a new option means adding the `\DeclareStringOption`, deriving from it in §2, *and*
 updating the option table in the manual (§2 "Klassenoptionen").
+
+### 1a. The identity layer (§2b)
+
+`identity=<name>` loads `swissidentity-<name>.sty` right after the options and the string table, but
+*before* fonts (§3) and colour (§4) — both of those sections read values (`\swiss@accent`,
+`\swiss@bandvalue`, `\swissidentityfonts`) an identity file has to have set by then. An identity file
+is just a sequence of calls to the public setters (§2b): `\swissidentitymeta` (company/legal/web),
+`\swisssetcolors` (`accent`/`paper`/`ink`, optional `band` — leaving `band` unset makes it an alias
+of `accent`, the "one signal colour" default since v2.0), `\newcommand{\swissidentityfonts}{...}`
+(the font provider, §3 — see I4 below), `\swisslogofiles` (cover logo file), `\swissclassifications`
+(the ordered classification vocabulary), `\swissfootformat` (the foot-line template, `\meta{key}`
+placeholders bound only at foot-typesetting time), and `\swisscovervariant` (named `\swisscover*`
+key-value presets — this one is declared in §2b specifically so an identity file can call it directly
+in its own body, *before* the identity-loading `\RequirePackage` below it; see the Fix Round 1
+comment there if you ever need to move it again). All of these are `\gdef`-style global setters, callable
+identically from an identity file or straight from the preamble — a document with no `identity=` can
+still call `\swisssetcolors` etc. itself and get the same effect, just not packaged for reuse.
+`swissidentity-acme.sty` is the reference implementation; `acme-demo.tex`/`acme-demo.pdf` is its
+worked example and the regression target for `tests/test_acme.py`.
+
+**I4 completeness is a provider *obligation*, not an enforced contract.** If an identity defines
+`\swissidentityfonts`, it must call `\renewfontfamily\condensed{...}` in there too (never
+`\newfontfamily` — `\condensed` is already declared by the class with the default font, precisely so
+`\renewfontfamily` has something to renew), and its own `\setmathfont` if it replaces math as well.
+The class only checks that `\swissidentityfonts` is *defined*, not that it is *complete* — an
+identity that swaps `\setmainfont` but forgets `\condensed` builds silently, with a mixed-family I4
+violation baked into the PDF. The only thing that would catch this after the fact is `swisscheck`
+A16 (font inventory) run against that identity's own reference document — which is exactly what
+`tests/test_acme.py::test_acme_fonts_are_grotesk_only` and the acme A16 check do for `acme`, and
+nothing does automatically for a future identity that skips its own test coverage.
 
 ### 2. The grid primitive `\swiss@placebox` (§5a)
 
@@ -172,7 +268,8 @@ Two traps documented in the source and the manual:
   break the grid), not what it does. Match that when adding code — those comments are the class's real
   documentation.
 - The version appears in two places and must be bumped in both: `\ProvidesClass` in `swisstex.cls:22`
-  and the cover plus colophon strings in `swisstex-manual.tex` (lines 11 and 275).
+  and the cover plus colophon strings in `swisstex-manual.tex` (the `foot=` key of the cover's
+  `\swisscover*` call, and the closing `\colophon`).
 
 ## Pitfalls
 
@@ -186,3 +283,7 @@ Two traps documented in the source and the manual:
 - If you measure a PDF yourself, convert between TeX points (1/72.27 in) and DTP points (1/72 in) —
   `swisscheck.py` does this via its `PT` constant. Skipping the factor makes a correct grid look
   like it drifts by about 0.05 pt per line.
+- `\swisscover*`'s key families (`swisscv`, the real one; `swisscvscan`, its no-op twin used only to
+  pre-apply `variant=`) must be extended together — a new slot key needs a matching entry in both
+  (see the comment in `swisstex.cls` §10a), or `\setkeys` breaks with an "undefined key" error the
+  first time anyone actually uses it.

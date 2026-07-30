@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import build_doc, swisscheck, ROOT
+from conftest import assert_clean_refs, build_doc, swisscheck, ROOT
 
 sys.path.insert(0, str(ROOT))
 import swisscheck as sc  # noqa: E402  (Modul, nicht die conftest-Hilfsfunktion)
@@ -82,13 +82,19 @@ def test_acme_demo_sidecar_checks_all_ok(tmp_path):
         zeile = next((z for z in out.splitlines() if z.strip().startswith(kennung)), None)
         assert zeile is not None, f"{kennung} fehlt in der Ausgabe:\n{out}"
         assert "ok" in zeile, f"{kennung} nicht 'ok':\n{zeile}\n\nVolle Ausgabe:\n{out}"
-    # A12 (Umschlag) wird über acme-demos eigenen Umschlag exercisiert, A10
-    # (Fusszeile) über dessen klassifizierte Fusszeile -- beide also mit
-    # geprüft > 0, nicht nur vacuously "ok" durch 0 geprüfte Fälle.
-    a10 = next(z for z in out.splitlines() if z.strip().startswith("A10"))
-    a12 = next(z for z in out.splitlines() if z.strip().startswith("A12"))
-    assert "(0 geprüft)" not in a10, a10
-    assert "(0 geprüft)" not in a12, a12
+    # Alle sechs neuen Prüfungen sind an acme-demo tatsächlich exercisiert,
+    # nicht nur vacuously "ok" durch 0 geprüfte Fälle: A10 (Fusszeile) über
+    # dessen klassifizierte Fusszeile, A11 (Kolumnentitel) über Pagina und
+    # Kopfzone auf jeder Inhaltsseite, A12 (Umschlag) über den eigenen
+    # Umschlag, A13 (Kommensurabilität) über die Randglosse (ein Cluster
+    # genügt, siehe die Prüfungslogik selbst), A15 (Farbrollen) läuft
+    # unbedingt ein Mal pro Aufruf (auch auf dem Ein-Rot-Pfad, siehe dort),
+    # A16 (Schriftinventar) über die eingebetteten SwissTeXGrotesk-/Mathe-
+    # Schriftnamen. Verifiziert per direktem `swisscheck.py acme-demo.pdf`-
+    # Lauf vor dieser Erweiterung (siehe Task-10-Bericht).
+    for kennung in ("A10", "A11", "A12", "A13", "A15", "A16"):
+        zeile = next(z for z in out.splitlines() if z.strip().startswith(kennung))
+        assert "(0 geprüft)" not in zeile, zeile
 
 
 def test_manual_and_demo_sidecar_checks_all_ok(tmp_path):
@@ -99,6 +105,12 @@ def test_manual_and_demo_sidecar_checks_all_ok(tmp_path):
     for name in ("swisstex-manual.tex", "swisstex-demo.tex"):
         r = build_doc(ROOT / name, tmp_path, runs=2)
         assert r.returncode == 0, (name, r.log[-3000:])
+        # The manual carries real \ref/\label cross-references (Identität,
+        # Sprachen); a regression back to a single pass would leave
+        # "Abschnitt??" in the PDF and pass build_doc's returncode check
+        # anyway (xelatex still exits 0) -- this is the machine net for
+        # exactly that (Task 5 fix round 1; conftest.assert_clean_refs).
+        assert_clean_refs(r.log, context=name)
         code, out = swisscheck(r.pdf)
         assert code == 0, (name, out)
 

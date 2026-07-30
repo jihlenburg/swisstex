@@ -7,9 +7,10 @@
 
 \begin{document}
 
-\swisscover{Dokumentation}{SwissTeX}{Satzsystem nach der Neuen Schweizer Schule}
-  {Version 2.0.0 \textbar{} TeX Gyre Heros \textbar{} Raster 13,5\,pt
-   \textbar{} Satzspiegel 105\,mm}
+\swisscover*{kicker={Dokumentation}, title={SwissTeX},
+  subtitle={Satzsystem nach der Neuen Schweizer Schule},
+  foot={Version 2.0.0 \textbar{} TeX Gyre Heros \textbar{} Raster 13,5\,pt
+   \textbar{} Satzspiegel 105\,mm}}
 
 \begin{lead}
 SwissTeX leitet den gesamten Satzspiegel aus sieben Kennzahlen ab. Es gibt
@@ -135,8 +136,9 @@ Auch die Klassenoption \code{band} verliert mit Version 2.0 ihren eigenen
 Vorgabewert: Er ist jetzt leer, und ein leerer Wert bedeutet
 \code{band = accent} -- Bandfelder tragen dieselbe Signalfarbe wie
 Auszeichnungen, statt eines zweiten, kaum unterscheidbaren Rots. Das ist die
-M-B-Regel gegen unmotivierte Zweitfarben: eine Signalfarbe pro Dokument,
-nicht zwei. Wer ein eigenständiges Bandrot braucht, setzt \code{band}
+Regel Müller-Brockmanns gegen unmotivierte Zweitfarben (im Folgenden kurz
+M-B-Regel): eine Signalfarbe pro Dokument, nicht zwei. Wer ein
+eigenständiges Bandrot braucht, setzt \code{band}
 weiterhin -- als Klassenoption wie vor Version 2.0, oder über
 \code{\textbackslash swisssetcolors\{band=...\}} in einer Identitätsdatei
 oder der Präambel (Abschnitt~\ref{sec:identitaet}); der zuletzt ausgeführte
@@ -259,11 +261,15 @@ aufrufbar sind:
 \addlinespace[3.5pt]
 \code{\textbackslash swisssetcolors\{...\}} & Farbrollen \code{accent}, \code{paper}, \code{ink}, optional \code{band} \\
 \addlinespace[3.5pt]
-\code{\textbackslash swisslogofiles\{...\}} & Logo-Dateien für Umschlag und Kolophon \\
+\code{\textbackslash newcommand\{\textbackslash swissidentityfonts\}\{...\}} & Schriftanbieter, ersetzt die Vorgabeschrift vollständig (I4, siehe unten) \\
+\addlinespace[3.5pt]
+\code{\textbackslash swisslogofiles\{...\}} & Logo-Datei für den Umschlag \\
 \addlinespace[3.5pt]
 \code{\textbackslash swissclassifications\{...\}} & geordnetes Klassifizierungsvokabular \\
 \addlinespace[3.5pt]
-\code{\textbackslash swissfootformat\{...\}} & Vorlage der Fusszeile \\
+\code{\textbackslash swissfootformat\{...\}} & Vorlage der Fusszeile (Abschnitt~\ref{sec:fusszeile}) \\
+\addlinespace[3.5pt]
+\code{\textbackslash swisscovervariant\{Name\}\{...\}} & benannte Umschlagvariante registrieren (Abschnitt~\ref{sec:umschlag}) \\
 \addlinespace[3.5pt]
 \code{\textbackslash swissmeta\{...\}} & dokumentseitige Angaben:
   \code{docid}, \code{version}, \code{date}, \code{classification}, \code{client} \\
@@ -271,6 +277,7 @@ aufrufbar sind:
 \end{tabularx}
 \end{swisstable}
 
+\marg{Der \code{colophon}-Schlüssel von \code{\textbackslash swisslogofiles} wird abgelegt, aber von \code{\textbackslash colophon} in Version 2.0 noch nicht gelesen -- ein offen dokumentierter Randfall, kein stiller Fehler}
 Alle Setzer wirken global, unabhängig von der Gruppierung an der
 Aufrufstelle -- wie \code{\textbackslash swisssetstrings} in
 Abschnitt~\ref{sec:sprachen}. \code{\textbackslash swissmeta} ist der
@@ -281,9 +288,173 @@ einzelnen Dokuments, \code{date} setzt sich ohne eigene Angabe auf
 \code{public}, \code{internal}, \code{confidential}, \code{strict}, siehe
 Abschnitt~\ref{sec:sprachen}); ein Wert ausserhalb dieses Vokabulars ist ein
 Fehler, kein stiller Rückfall. Ohne \code{identity=} bleibt die Klasse bei
-ihrer Vorgabe. Fusszeile, Umschlag und Kolophon lesen diese Angaben; eine
-vollständige Beschreibung mit Beispieldatei folgt in einem eigenen
-Abschnitt dieses Handbuchs.
+ihrer Vorgabe. Fusszeile, Umschlag und Kolophon lesen diese Angaben.
+
+\subsubsection{Vollständigkeit ist Pflicht des Anbieters (I4)}
+
+Ersetzt eine Identität die Schrift über
+\code{\textbackslash newcommand\{\textbackslash swissidentityfonts\}\{...\}},
+muss sie darin -- neben \code{\textbackslash setmainfont} -- auch
+\code{\textbackslash renewfontfamily\textbackslash condensed\{...\}}
+aufrufen (die Schmalschrift-Familie ist bereits deklariert, ein
+\code{\textbackslash newfontfamily} scheiterte an dieser Stelle); ersetzt
+sie auch die Mathematik, gilt dieselbe Pflicht für einen eigenen
+\code{\textbackslash setmathfont}-Aufruf. Die Klasse prüft nur, ob
+\code{\textbackslash swissidentityfonts} definiert ist, nicht, ob es
+vollständig ist: Eine Identität, die nur \code{\textbackslash setmainfont}
+austauscht, aber die Schmalschrift vergisst, baut anstandslos -- mit einer
+stillen Mischung zweier Schriftfamilien, genau dem I4-Verstoss, den die
+Klasse eigentlich ausschliesst. Durchgesetzt wird diese Vollständigkeit erst
+nachträglich, am fertigen Dokument: swisscheck A16
+(Abschnitt~\ref{sec:pruefung}) vergleicht jede eingebettete Schrift gegen
+die im Kennzahlen-Sidecar deklarierten Familien. Die Referenzidentität
+\code{acme} erfüllt die Pflicht vollständig und wird genau darauf geprüft.
+
+\subsubsection{Beispiel: die Referenzidentität acme}
+
+\code{acme} ist ein neutraler Platzhaltername, keine reale Firma. Ein
+Auszug aus \code{swissidentity-acme.sty}:
+
+\begin{gridblock}
+\code{\textbackslash swissidentitymeta\{company=Acme AG, web=acme.example\}}\\
+\code{\textbackslash swisssetcolors\{accent=200,16,46, paper=245,244,238, ink=26,26,26\}}\\
+\code{\textbackslash newcommand\{\textbackslash swissidentityfonts\}\{}\\
+\code{\hspace{1.5em}\textbackslash setmainfont\{SwissTeX Grotesk\}}\\
+\code{\hspace{1.5em}\textbackslash renewfontfamily\textbackslash condensed\{SwissTeX Grotesk Condensed\}}\\
+\code{\hspace{1.5em}\textbackslash setmathfont\{TeX Gyre DejaVu Math\}\}}\\
+\code{\textbackslash swisslogofiles\{cover=acme-logo.pdf\}}\\
+\code{\textbackslash swissclassifications\{public,internal,confidential,strict\}}\\
+\code{\textbackslash swissfootformat\{\textbackslash meta\{docid\} · \textbackslash meta\{version\} · \textbackslash meta\{date\}\}}
+\end{gridblock}
+
+Ein Dokument, das diese Identität nutzt, trägt nur noch seine eigenen
+Angaben:
+
+\begin{gridblock}
+\code{\textbackslash documentclass[identity=acme]\{swisstex\}}\\
+\code{\textbackslash swissmeta\{docid=TR-2026-014, version=1.2, classification=internal\}}
+\end{gridblock}
+
+\code{acme-demo.tex}/\code{acme-demo.pdf} setzt diese Identität tatsächlich
+um -- über jeden öffentlichen Setzer dieses Abschnitts hinweg -- und ist
+damit das lauffähige Gegenstück zu dieser Beschreibung.
+
+\subsection{Umschlag und Varianten}
+\label{sec:umschlag}
+
+\code{\textbackslash swisscover*\{...\}} legt die randabfallende
+Umschlagseite mit einer Schlüssel-Wert-Liste an und steht seit Version 2.0
+vollständig auf dem Seitenraster: weder das Farbband noch das
+Überformatzeichen tragen noch eine Seitenanteilskoordinate.
+
+\begin{swisstable}{Schlüssel von \code{\textbackslash swisscover*}}
+\begin{tabularx}{\textcolumn}[t]{@{}S{26mm}@{\hspace{3mm}}L@{}}
+\toprule
+\tabhead{Schlüssel} & \tabhead{Wirkung} \\
+\midrule
+\code{kicker} & Kennzeichnung oben links; ab \code{internal} rechtsbündig mit der Klassifizierungsmarke \\
+\addlinespace[3.5pt]
+\code{title} & Haupttitel, \code{\textbackslash swissdisplay\{4\}} \\
+\addlinespace[3.5pt]
+\code{subtitle} & Untertitel in der Signalfarbe, \code{\textbackslash swissdisplay\{1\}} \\
+\addlinespace[3.5pt]
+\code{glyph} & Überformatzeichen; ohne diesen Schlüssel erscheint keins -- seit 2.0 kein Vorgabezeichen mehr \\
+\addlinespace[3.5pt]
+\code{glyphline} & Rasterzeile der Zeichen-Grundlinie (Vorgabe 30) \\
+\addlinespace[3.5pt]
+\code{glyphlines} & Zeichenhöhe in Rasterzeilen (Vorgabe 34) \\
+\addlinespace[3.5pt]
+\code{band} & Farbband als \code{start/lines} in Rasterzeilen (Vorgabe 38/9) \\
+\addlinespace[3.5pt]
+\code{logo} & Logodatei; Vorgabe aus \code{\textbackslash swisslogofiles} \\
+\addlinespace[3.5pt]
+\code{foot} & Fusstext links im Farbband \\
+\addlinespace[3.5pt]
+\code{client} & Auftraggeber, Teil der rechtsbündigen Metazeile \\
+\addlinespace[3.5pt]
+\code{docid} & Dokumentkennung; Vorgabe aus \code{\textbackslash swissmeta} \\
+\addlinespace[3.5pt]
+\code{date} & Datum; Vorgabe aus \code{\textbackslash swissmeta}, letztlich \code{\textbackslash today} \\
+\addlinespace[3.5pt]
+\code{variant} & registrierte Umschlagvariante anwenden; explizite Schlüssel überschreiben sie \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+
+\marg{Kein Seitenanteil mehr: Band und Zeichen hängen an Rasterzeilen}
+Das Farbband platziert seine Oberkante auf Rasterzeile \code{start} und
+seine Höhe auf \code{lines} Rasterzeilen, über die volle Seitenbreite; die
+Vorgabe \code{38/9} gilt, solange \code{band} nicht gesetzt wird. Beide
+Teilwerte müssen nichtnegative Ganzzahlen sein; reicht die Spanne über das
+Seitenraster hinaus, warnt die Klasse, bricht aber nicht ab. Das
+Überformatzeichen folgt derselben Rasterlogik: \code{glyphline} hängt seine
+Grundlinie an eine Rasterzeile, \code{glyphlines} bestimmt seine Höhe in
+Rasterzeilen, und seine linke Kante liegt auf der Textachse -- dieselbe
+Koordinatenkonvention wie das Rasterkontroll-Overlay
+(\code{showgrid=true}). Anders als vor Version 2.0 gibt es dafür kein
+Vorgabezeichen mehr: Ohne \code{glyph=} erscheint gar keins. Ein Zeichen ist
+damit eine bewusste, identitätstragende Entscheidung, kein automatisches
+Ornament.
+
+\marg{Varianten legen Positionen fest, Dokumente füllen Inhalt}
+\code{\textbackslash swisscovervariant\{Name\}\{Vorgaben\}} hinterlegt eine
+Schlüssel-Wert-Liste unter einem Variantennamen -- aus einer
+Identitätsdatei heraus (Abschnitt~\ref{sec:identitaet}) oder direkt in der
+Präambel, mit derselben globalen Wirkung wie jeder andere Setzer dieses
+Handbuchs. \code{\textbackslash swisscover*\{variant=Name, ...\}} wendet die
+hinterlegten Vorgaben an; jeder im selben Aufruf ausdrücklich gesetzte
+weitere Schlüssel überschreibt seine Entsprechung aus der Variante --
+unabhängig davon, ob er vor oder nach \code{variant=...} in der Liste
+steht. Die Referenzidentität \code{acme} registriert so die Variante
+\code{report}:
+
+\begin{gridblock}
+\code{\textbackslash swisscovervariant\{report\}\{band=38/9, glyphline=30\}}
+\end{gridblock}
+
+-- hier deckungsgleich mit der Klassenvorgabe, aber unter einem eigenen
+Namen buchbar, damit ein Dokument \code{variant=report} schreibt statt jeden
+Wert einzeln zu wiederholen. Ein Vokabular mit tatsächlich unterschiedlichen
+Varianten (etwa für ein Angebot oder einen internen Bericht) ist ebenso
+möglich; die Klasse schliesst kein Vokabular, sie liefert nur den
+Mechanismus.
+
+\marg{Die alte Positionsform warnt bereits in Version 2.0, nicht erst ab 2.1 wie bei \code{\textbackslash swisstitle}}
+Die alte Positionsform \code{\textbackslash
+swisscover\{Kennzeichnung\}\{Titel\}\{Untertitel\}\{Fuss\}} bleibt nutzbar,
+meldet aber schon jetzt eine Warnung beim Bau, nicht erst ab einer
+künftigen Version. Dieses Handbuch setzt seinen eigenen Umschlag seit
+dieser Überarbeitung deshalb mit der Slot-Form.
+
+\subsection{Fusszeile}
+\label{sec:fusszeile}
+
+\marg{Kein Logo im Kolumnentitel: eine wiederholte Marke informiert einmal, jede weitere Wiederholung ist nur noch Werbung}
+Kopf- und Fusszeile teilen sich dieselbe Rastergeometrie und dieselbe
+Zurückhaltung. Der Kolumnentitel trägt links die Pagina im Grundschriftgrad
+in der Signalfarbe und rechts den mit \code{\textbackslash setrunningtitle}
+gesetzten Lauftitel in der Schmalschrift auf Kennzeichnungsgrad -- kein
+Logo; das bleibt Umschlag und Kolophon vorbehalten
+(Abschnitt~\ref{sec:umschlag}). \code{headsep} bindet den Kopf an
+\code{2\textbackslash gridunit}, \code{footskip} den Fuss an
+\code{3\textbackslash gridunit} -- beide Grundlinien liegen auf derselben
+verlängerten Rasterzeile wie der Grundtext, geprüft von swisscheck A10 und
+A11 (Abschnitt~\ref{sec:pruefung}).
+
+Die Fusszeile trägt zwei getrennte Zonen: links, in der Marginalspalte, die
+Klassifizierungsmarke, rechts, ab der Textachse, eine Metazeile aus
+Dokumentangaben. Die Marke erscheint nur ab der Klassifizierungsstufe
+\code{internal} aufwärts -- Schweigen ist der öffentliche Zustand, keine
+sichtbare Markierung für die niedrigste Stufe. Die Metazeile kommt aus
+\code{\textbackslash swissfootformat\{...\}} (Abschnitt~\ref{sec:identitaet}):
+eine mit \code{\textbackslash meta\{key\}} formulierte Vorlage, die erst
+beim tatsächlichen Fusssatz an die Dokumentangaben aus
+\code{\textbackslash swissmeta} gebunden wird, sodass ein späteres
+\code{\textbackslash swissmeta} in der Identitätsdatei oder im Dokument
+selbst noch greift. Ohne eigenes \code{\textbackslash swissfootformat}
+bleibt die Metazeile leer; ein einzelner nie gesetzter
+\code{\textbackslash meta\{key\}}-Schlüssel liefert dabei ebenfalls nur
+Leere statt eines Fehlers.
 
 \subsection{Tabellen}
 
@@ -387,6 +558,7 @@ Unterschied im sichtbaren Weissraum entspricht der Differenz aus Ober- und
 Unterlänge und lässt sich mit ganzen Rasterzeilen nicht wegrechnen.
 
 \section{Prüfung}
+\label{sec:pruefung}
 
 \subsection{swisscheck}
 
@@ -408,6 +580,39 @@ Schalter an ein abweichendes Raster anpassen.
 Wer eigene Messungen anstellt, muss zwischen TeX-Punkt und DTP-Punkt
 umrechnen. Ohne diesen Faktor erscheint jedes korrekte Raster als langsam
 wegdriftend, mit etwa 0,05\,pt je Zeile.
+
+\subsection{Kennzahlen-Sidecar}
+
+\marg{Die Sidecar-Datei prüft rückwirkend auch A1 bis A9: sobald sie vorliegt, gelten deklarierte Kennzahlen statt Kommandozeilen-Vorgaben}
+Seit Version 2.0 schreibt die Klasse \code{\textbackslash AtEndDocument}
+eine zweite, kleine Datei neben die PDF: \code{<jobname>.swisscheck}, eine
+Zeile \code{schlüssel=wert} je Kennzahl -- Rastermass, die drei
+Nebentext-Durchschüsse, Kopf- und Fusszonen, Steg- und Spaltenmasse,
+Farbrollen, Schriftfamilien, Klassifizierung, Dokumentkennung.
+\code{swisscheck.py} findet diese Sidecar-Datei automatisch neben der
+geprüften PDF (oder nimmt sie über \code{-{}-params Datei} entgegen) und
+prüft dann gegen die deklarierten Kennzahlen dieses Dokuments statt gegen
+feste Kommandozeilen-Annahmen -- ein Dokument mit eigenem
+\code{outermargin=} oder eine Identität mit eigenem \code{accent=} bleibt
+ohne manuelle Schalter prüfbar. Das gilt rückwirkend auch für A1 bis A9:
+Liegt eine Sidecar-Datei vor, lesen auch die ursprünglichen neun Prüfungen
+ihre Kennzahlen aus ihr, nicht aus den Kommandozeilen-Vorgaben. Fehlt die
+Datei -- etwa bei einer älteren, vor Version 2.0 gebauten PDF --, fällt
+swisscheck für A1 bis A9 auf seine bisherigen Vorgaben zurück und
+überspringt die sechs neuen Prüfungen sauber, ohne einen Verstoss zu
+melden.
+
+Sechs neue Prüfungen kommen damit hinzu: die Fusszeile auf dem
+Rasterfusspunkt mit ihren beiden Zonen (A10, Abschnitt~\ref{sec:fusszeile}),
+der Kolumnentitel mit der Pagina im Grundschriftgrad und einer bildfreien
+Kopfzone (A11), der Umschlag mit dem Farbband auf Rasterzeilen und
+Schriftgraden aus der Anzeigenskala (A12, Abschnitt~\ref{sec:umschlag}), die
+Kommensurabilität des Nebentext-Durchschusses in der Marginalspalte gegen
+die drei deklarierten Kennzahlen (A13), die Unterscheidbarkeit eines
+eigenständigen Bandtons von der Signalfarbe (A15) sowie das
+Schriftinventar der eingebetteten Schriften gegen die deklarierten
+Familien (A16). A14, die Prüfung für zweisprachigen Satz, ist für eine
+spätere Ausbaustufe vorgesehen und heute nicht implementiert.
 
 \subsection{Grenzen}
 

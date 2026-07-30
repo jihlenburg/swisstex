@@ -1054,6 +1054,10 @@
 % gespeicherte Liste ueber die Familie "swisscv" an.
 %
 % -- Schluesselfamilien --------------------------------------------------
+% Wartungshinweis: ein neuer Slot-Schluessel braucht einen Eintrag in BEIDEN
+% Familien -- wirkend hier in "swisscv", wirkungslos in "swisscvscan" unten
+% (Ausnahme: "variant" selbst) -- sonst bricht \setkeys mit einem
+% "undefined key"-Fehler ab, sobald jemand den neuen Schluessel benutzt.
 \define@key{swisscv}{kicker}{\def\swiss@cv@kicker{#1}}
 \define@key{swisscv}{title}{\def\swiss@cv@title{#1}}
 \define@key{swisscv}{subtitle}{\def\swiss@cv@subtitle{#1}}

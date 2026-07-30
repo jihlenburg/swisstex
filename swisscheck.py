@@ -13,6 +13,24 @@ Geprüft werden:
   A4  Marginalspalte   Trägt nur Beschriftung, kein Satzmaterial.
   A5  Legendenflucht   Tabellenlegende fluchtet mit der ersten Tabellenlinie.
   A6  Seitenfuss       Keine Überschrift am unteren Seitenende.
+  A7  Marginalzonen    Glossen- und Ziffernzone der Marginalspalte trennen sich.
+  A8  Zeilenanfang     Kein Absatz beginnt mit einem unbeabsichtigten Einzug.
+  A9  Figurenlegende   Abbildungslegende fluchtet mit der Abbildungsoberkante.
+  A10 Fusszeile        Grundlinie auf dem Rasterfusspunkt; Klassifizierung
+                       und Metadaten bleiben in ihrer je eigenen Zone.
+  A11 Kolumnentitel    Pagina im Grundschriftgrad; keine Grafik in der Kopfzone.
+  A12 Umschlag         Farbband auf Rasterzeilen; Schriftgrade aus der
+                       Anzeigenskala oder grundschriftgrad-nah.
+  A13 Kommensurabilität Durchschuss der Nebentexte in der Marginalspalte
+                       entspricht einer deklarierten Kennzahl.
+  A15 Farbrollen       Ein eigenständiges Band unterscheidet sich deutlich
+                       von der Signalfarbe.
+  A16 Schriftinventar  Nur deklarierte Schriftfamilien sind eingebettet.
+  (A14, zweisprachiger Satz, ist für eine spätere Ausbaustufe vorgesehen und
+  hier nicht implementiert.)
+
+A10-A13/A15/A16 lesen ihre Kennzahlen aus der Sidecar-Datei <jobname>.swisscheck
+(siehe unten); ohne sie überspringen sie sich sauber (0 geprüft, kein Fehler).
 
 Aufruf:
     python3 swisscheck.py bericht.pdf [--tex bericht.tex]
@@ -35,6 +53,17 @@ MM = 72 / 25.4
 # TeX-Punkt (1/72,27 Zoll). Ohne diese Umrechnung erscheint jedes
 # Basislinienraster als langsam wegdriftend.
 PT = 72 / 72.27
+
+# Zwei wiederkehrende Toleranzwerte, empirisch statt abgeleitet, deshalb als
+# Parameter-Vorgabe an jeder einzelnen Stelle wiederholt statt als Konstante:
+#   0.6pt  Positionstoleranz für Linien-/Kantenlagen und Zonengrenzen
+#          (pruefe_achsentreue, pruefe_marginalzonen, pruefe_fusszeile,
+#          pruefe_umschlag) -- deckt die Rundung ab, mit der pdfplumber
+#          Vektorkoordinaten aus dem PDF-Content-Stream meldet.
+#   1.0mm  "Wortkasten-Spielraum" für Prüfungen, die einen Wortkasten gegen
+#          eine Kante stellen (pruefe_marginalspalte, pruefe_fusszeile,
+#          farbfelder, _bandrechtecke) -- deckt die kleine Überlänge ab, die
+#          pdfplumber Wortkästen an den seitlichen Glyphenkanten lässt.
 
 
 @dataclass
@@ -683,9 +712,15 @@ def _bandrechtecke(seite, tol=1.0):
 
 
 def _umschlag_schriftgrad_ok(size: float, r: Raster, tol=0.5) -> bool:
+    # Eine fruehere dritte Bedingung "size <= 8 + tol" ist entfernt: sie war
+    # fuer jeden realistischen Grundschriftgrad toter Code, weil ihre
+    # Schwelle (8 + tol) erst unterhalb von bodysize <~ 7.7pt ueber die
+    # folgende Bedingung (r.bodysize + 0.35 + tol) hinausreicht -- kleiner
+    # als jede in diesem Projekt oder sonst ueblich gesetzte
+    # Fliesstextgroesse (Vorgabe 9.5pt). Verifiziert an allen drei
+    # Referenzdokumenten: keine Umschlag-Schriftgroesse dort haengt an dieser
+    # Bedingung, alle laufen ueber die erste oder die Anzeigenskala.
     if size <= r.bodysize + 0.35 + tol:
-        return True
-    if size <= 8 + tol:
         return True
     return any(abs(size - 0.8 * n * r.gridunit) <= tol for n in range(1, 7))
 

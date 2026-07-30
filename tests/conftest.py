@@ -38,6 +38,20 @@ def swisscheck(pdf, *args):
                        cwd=ROOT, capture_output=True, text=True, timeout=120)
     return r.returncode, r.stdout + r.stderr
 
+def assert_clean_refs(log, context=""):
+    """No unresolved \\ref/\\label cross-reference leaked through a build:
+    neither a "Reference `...' on page N undefined" warning in the .log, nor
+    the literal "??" that \\ref/\\pageref substitutes when a label never
+    resolved (e.g. "Abschnitt??"). Task 5 fix round 1 found exactly this on
+    swisstex-manual.tex: a single xelatex pass left five "Abschnitt??"
+    instances from the Identität/Sprachen forward references -- the manual
+    needs two passes, and this is the machine net that would have caught a
+    regression back to one."""
+    tag = f"{context}: " if context else ""
+    m = re.search(r"Reference `[^']*' on page \d+ undefined", log)
+    assert m is None, f"{tag}unresolved cross-reference in log: {m.group(0)}"
+    assert "??" not in log, f"{tag}log contains a literal '??' (broken \\ref/\\pageref)"
+
 @pytest.fixture(scope="session")
 def logo_pdf(tmp_path_factory):
     # Task 6: a tiny standalone one-rect PDF used as a stand-in logo file by

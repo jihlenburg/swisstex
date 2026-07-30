@@ -15,7 +15,7 @@
 # below by asserting no "undefined"/"??" residue in the log rather than just
 # assuming it.
 
-from conftest import build_doc, swisscheck, ROOT
+from conftest import assert_clean_refs, build_doc, swisscheck, ROOT
 import pdfplumber
 
 DOC = ROOT / "acme-demo.tex"
@@ -46,7 +46,11 @@ def test_acme_demo_no_undefined_or_division_errors(tmp_path):
     assert r.returncode == 0, r.log[-3000:]
     assert r.log.count("Division by 0") == 0, r.log[-3000:]
     assert r.log.count("Undefined control sequence") == 0, r.log[-3000:]
-    assert "??" not in r.log, r.log[-3000:]
+    # acme-demo.tex has no \ref/\label of its own (see module docstring), so
+    # this single-pass build must also come out with no broken cross-
+    # references -- the same machine net as the manual's two-pass build
+    # (tests/test_swisscheck.py), wired in here too per the T10 brief.
+    assert_clean_refs(r.log, context="acme-demo")
 
 
 def test_acme_fonts_are_grotesk_only(tmp_path):
