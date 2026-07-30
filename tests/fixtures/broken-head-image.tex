@@ -1,0 +1,17 @@
+% Task 9: deliberat gebrochene Vorlage fuer A11 (Kolumnentitel).
+% \fancyhead[R]{...} wird zwar in der Praeambel AUFGERUFEN, aber erst beim
+% Satz der ersten Seite AUSGEFUEHRT (fancyhdr speichert den Kopfzeileninhalt
+% nur, es tippsetzt ihn nicht sofort) -- zu diesem spaeteren Zeitpunkt hat
+% die Klasse laengst zuende geladen, \includegraphics (aus graphicx,
+% Abschnitt 11a) ist also bereits verfuegbar. "acme-logo.pdf" liegt am
+% Repo-Wurzelverzeichnis; build_doc() startet xelatex immer mit cwd=ROOT
+% (siehe tests/conftest.py), darum loest sich der relative Dateiname ueber
+% kpathseas implizite "."-Suche auf, genau wie in acme-demo.tex selbst.
+\documentclass{swisstex}
+\fancyhead[R]{\includegraphics[height=5pt]{acme-logo.pdf}}
+\begin{document}
+\section{Abschnitt}
+Grundtext auf dem Raster. Ein Absatz mit genug Woertern fuer mindestens
+eine volle Zeile Flattersatz und Trennung im Basisraster der Klasse, damit
+die Kopfzeile dieser Seite tatsaechlich gesetzt wird.
+\end{document}

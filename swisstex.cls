@@ -1411,4 +1411,96 @@
 % ---------------------------------------------------------------------
 \RequirePackage[hidelinks,bookmarks=true,bookmarksnumbered=true]{hyperref}
 
+% ---------------------------------------------------------------------
+% 14a  Kennzahlen-Sidecar (Task 9)
+% \jobname.swisscheck: eine Zeile "schluessel=wert" je Kennzahl, geschrieben
+% \AtEndDocument. swisscheck.py liest sie (--params oder Auto-Erkennung
+% neben der PDF) und prueft damit gegen die DEKLARIERTEN Kennzahlen dieses
+% Dokuments statt gegen feste Kommandozeilen-Annahmen -- ein Dokument mit
+% eigenem outermargin= oder eine Identitaet mit eigenem accent= bleibt
+% pruefbar, ohne dass swisscheck seine Werte erraten muss. Fehlt die Datei
+% (aeltere, vor diesem Task gebaute PDFs), faellt swisscheck auf seine
+% bisherigen Vorgaben zurueck -- siehe dort; diese Klasse selbst schreibt
+% die Sidecar-Datei immer, ausnahmslos.
+%
+% -- Familiennamen (mainfamily/condensedfamily) --------------------------
+% \f@family (NFSS-Kern) nach \normalfont bzw. \condensed, in je einer
+% LOKALEN Gruppe erfasst -- der Anbieter (Vorgabe oder Identitaet) bleibt
+% dabei gleichgueltig: der Vorgabepfad liefert, was \swiss@defaultfonts
+% tatsaechlich waehlt (empirisch: \f@family = "texgyreheros(0)"), eine
+% Identitaet liefert, was ihr eigenes \swissidentityfonts tatsaechlich
+% gesetzt hat (empirisch, swissidentity-acme.sty: \f@family =
+% "SwissTeXGrotesk(0)" fuer \setmainfont{SwissTeX Grotesk}) -- ohne dass
+% diese Klasse den Anbieter kennen oder dessen Optionswerte lesen muss.
+% Fontspec haengt der Familien-ID stets ein Instanzkennzeichen "(n)" an;
+% \swiss@sc@stripinst schneidet das am ERSTEN "(" ab (derselbe
+% Delimiter-Aufruf wie \swiss@defstr@i/\swiss@cv@splitband). \in@ prueft
+% zuvor, ob ueberhaupt ein "(" vorkommt (Abschnitt 10a-Idiom: der
+% Heuhaufen muss ERST ueber \edef+\noexpand vorab expandiert werden, ein
+% roher Verweis auf ein Makro faende darin nie einen Treffer) -- fehlt das
+% "(" wider Erwarten, bleibt der volle \f@family-Wert stehen, statt einen
+% rohen "Runaway argument"-Fehler zu riskieren.
+%
+% -- Mathe-Schrift ---------------------------------------------------------
+% \fontname\textfont\symoperators (TeX-Primitiv) liefert den tatsaechlich
+% GELADENEN Dateinamen der Basis-Mathe-Schrift (empirisch:
+% "\"TeXGyreDejaVuMath-Regular/OT:script=math;language=dflt;\" at 9.5pt"),
+% unabhaengig vom Anbieter und ohne NFSS-Umweg: unicode-math bindet die
+% Mathe-Schrift nicht ueber \fontfamily/\f@family, sondern ueber die
+% (LaTeX-)Mathe-Familiennummern \sym...; \symoperators ist die Basisfamilie,
+% die jeder \setmathfont-Aufruf (Vorgabe wie Identitaet) unconditional
+% besetzt. Der Dateiname bleibt dabei ROH stehen (Anfuehrungszeichen,
+% "/OT:..."-Anhang, " at Ngrad"): swisscheck vergleicht ohnehin nur
+% normalisierte TEILzeichenketten (Gross-/Kleinschreibung, Leerzeichen,
+% Bindestriche entfernt), und der eigentliche Dateiname steht als PRAEFIX
+% vor dem Anhang -- ein zusaetzlicher Bereinigungsschritt hier waere
+% ueberfluessig.
+\def\swiss@sc@stripinst#1(#2\@nil{#1}
+\newwrite\swiss@sc@file
+\AtEndDocument{%
+  \begingroup
+    \normalfont
+    \xdef\swiss@sc@main{\f@family}%
+  \endgroup
+  \edef\swiss@sc@sbtmp{\noexpand\in@{(}{\swiss@sc@main}}\swiss@sc@sbtmp
+  \ifin@\xdef\swiss@sc@main{\expandafter\swiss@sc@stripinst\swiss@sc@main\@nil}\fi
+  \begingroup
+    \condensed
+    \xdef\swiss@sc@cond{\f@family}%
+  \endgroup
+  \edef\swiss@sc@sbtmp{\noexpand\in@{(}{\swiss@sc@cond}}\swiss@sc@sbtmp
+  \ifin@\xdef\swiss@sc@cond{\expandafter\swiss@sc@stripinst\swiss@sc@cond\@nil}\fi
+  \xdef\swiss@sc@math{\fontname\textfont\symoperators}%
+  \xdef\swiss@sc@class{\swiss@meta{classification}}%
+  \ifx\swiss@sc@class\@empty\xdef\swiss@sc@class{none}\fi
+  \immediate\openout\swiss@sc@file=\jobname.swisscheck
+  \immediate\write\swiss@sc@file{gridunit=\the\gridunit}%
+  \immediate\write\swiss@sc@file{bodysize=\the\dimexpr\swiss@bodysize\relax}%
+  \immediate\write\swiss@sc@file{annotationleading=\the\annotationleading}%
+  \immediate\write\swiss@sc@file{glossleading=\the\glossleading}%
+  \immediate\write\swiss@sc@file{footnoteleading=\the\footnoteleading}%
+  \immediate\write\swiss@sc@file{headsep=\the\headsep}%
+  \immediate\write\swiss@sc@file{footskip=\the\footskip}%
+  \immediate\write\swiss@sc@file{outermargin=\swiss@outermargin}%
+  \immediate\write\swiss@sc@file{margincolumn=\swiss@margincolumn}%
+  \immediate\write\swiss@sc@file{gutter=\swiss@gutter}%
+  \immediate\write\swiss@sc@file{numberzone=\swiss@numberzone}%
+  \immediate\write\swiss@sc@file{textcolumn=\swiss@textcolumn}%
+  \immediate\write\swiss@sc@file{topmargin=\swiss@topmargin}%
+  \immediate\write\swiss@sc@file{gridlines=\swiss@gridlines}%
+  \immediate\write\swiss@sc@file{accent=\swiss@accent}%
+  \ifx\swiss@bandvalue\@empty
+    \immediate\write\swiss@sc@file{band=accent}%
+  \else
+    \immediate\write\swiss@sc@file{band=\swiss@bandvalue}%
+  \fi
+  \immediate\write\swiss@sc@file{paper=\swiss@paper}%
+  \immediate\write\swiss@sc@file{ink=\swiss@ink}%
+  \immediate\write\swiss@sc@file{mainfamily=\swiss@sc@main}%
+  \immediate\write\swiss@sc@file{condensedfamily=\swiss@sc@cond}%
+  \immediate\write\swiss@sc@file{mathfont=\swiss@sc@math}%
+  \immediate\write\swiss@sc@file{classification=\swiss@sc@class}%
+  \immediate\write\swiss@sc@file{docid=\swiss@meta{docid}}%
+  \immediate\closeout\swiss@sc@file}
+
 \endinput
