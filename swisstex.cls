@@ -42,7 +42,11 @@
 \DeclareStringOption[26mm]{topmargin}
 \DeclareStringOption[51]{gridlines}        % Rasterzeilen je Seite
 \DeclareStringOption[255,55,37]{accent}    % Signalfarbe, RGB-Tripel
-\DeclareStringOption[255,105,91]{band}    % Farbe der Farbfelder
+% v2.0: Vorgabe jetzt leer statt 255,105,91 -- eine ausdruecklich gesetzte
+% Option ueberschreibt weiterhin \swiss@bandvalue (siehe Abschnitt 2b,
+% v1.3-Bruecke); leer heisst seither "band = accent" (eine Signalfarbe,
+% M-B-Regel gegen ein zweites, unmotiviertes Rot).
+\DeclareStringOption[]{band}              % leer = accent (eine Farbe)
 \DeclareStringOption[234,232,208]{paper}  % Grundton der Seite
 \DeclareStringOption[26,26,26]{ink}       % Textfarbe
 \DeclareBoolOption[false]{tint}           % Grundton flaechig anlegen
@@ -57,6 +61,7 @@
 \DeclareStringOption[]{annotationleading} % leer = 2/3 Rastermass
 \DeclareStringOption[]{glossleading}      % leer = 3/4 Rastermass
 \DeclareStringOption[]{footnoteleading}   % leer = 3/4 Rastermass
+\DeclareStringOption[]{identity}          % Name der Identitaetsdatei (leer = keine)
 \DeclareDefaultOption{\PassOptionsToClass{\CurrentOption}{article}}
 \ProcessKeyvalOptions*
 
@@ -191,6 +196,139 @@
   classification-strict=Strictly confidential}
 
 % ---------------------------------------------------------------------
+% 2b  Identitaetsschnittstelle
+% Oeffentliche Setzer fuer Farbrollen, Identitaetsmetadaten (Firma,
+% Impressum, Web), Logo-Dateien, das Klassifizierungsvokabular und die
+% Fusszeilenvorlage, dazu die dokumentseitigen Metadaten \swissmeta. Alle
+% Setzer sind dieselben Befehle in der Praeambel UND in einer
+% Identitaetsdatei -- der Aufrufort ist gleichgueltig, darum wirkt jeder
+% \gdef statt \def: eine Identitaetsdatei laeuft zwar bereits ausserhalb
+% jeder Gruppe (sie wird wie ein Paket geladen, kein \begingroup drumherum),
+% ein \swissmeta-Aufruf mitten im Dokument kann aber in einer Gruppe stehen
+% (z. B. innerhalb einer Umgebung), und dort MUSS die Wirkung ueber das
+% Gruppenende hinaus bestehen bleiben. \define@key/\setkeys kommen bereits
+% ueber kvoptions (Abschnitt 1) mit dem Kern-keyval-Paket herein; kein
+% zusaetzliches \RequirePackage{keyval} noetig.
+\def\swiss@bandvalue{}% leer = eine Farbe (Bandfeld = Signalfarbe, M-B-Regel)
+% v1.3-Bruecke: Die Klassenoption "band" trug vor v2.0 einen festen
+% Vorgabewert (255,105,91); ihr Vorgabewert ist seit v2.0 leer (Abschnitt 1),
+% "band = accent" (eine Farbe) ist die neue Grundeinstellung. Ein
+% AUSDRUECKLICH am \documentclass gesetzter Optionswert macht \swiss@band
+% nicht-leer und wird hier uebernommen (v1.3-Verhalten bleibt erreichbar);
+% eine Identitaetsdatei oder ein spaeteres \swisssetcolors{band=...} in der
+% Praeambel ueberschreiben ihn danach erneut -- letzter Aufruf gewinnt, wie
+% bei jedem anderen Setzer.
+\ifx\swiss@band\@empty\else\global\let\swiss@bandvalue\swiss@band\fi
+\define@key{swissid}{accent}{\gdef\swiss@accent{#1}}
+\define@key{swissid}{band}{\gdef\swiss@bandvalue{#1}}
+\define@key{swissid}{paper}{\gdef\swiss@paper{#1}}
+\define@key{swissid}{ink}{\gdef\swiss@ink{#1}}
+\newcommand{\swisssetcolors}[1]{\setkeys{swissid}{#1}}
+
+\gdef\swiss@id@company{}\gdef\swiss@id@legal{}\gdef\swiss@id@web{}
+\define@key{swissidm}{company}{\gdef\swiss@id@company{#1}}
+\define@key{swissidm}{legal}{\gdef\swiss@id@legal{#1}}
+\define@key{swissidm}{web}{\gdef\swiss@id@web{#1}}
+\newcommand{\swissidentitymeta}[1]{\setkeys{swissidm}{#1}}
+
+\gdef\swiss@logo@cover{}\gdef\swiss@logo@colophon{}
+\define@key{swisslogo}{cover}{\gdef\swiss@logo@cover{#1}}
+\define@key{swisslogo}{colophon}{\gdef\swiss@logo@colophon{#1}}
+\newcommand{\swisslogofiles}[1]{\setkeys{swisslogo}{#1}}
+
+% Klassifizierungsvokabular: geordnete Liste, der Index bestimmt die
+% Rangfolge (0 = niedrigste Stufe). Die Vorgabe deckt sich mit den
+% Sprachtabellenschluesseln classification-public/-internal/-confidential/
+% -strict aus Abschnitt 2a; eine Identitaet mit eigenem Vokabular braucht
+% passende \swisssetstrings-Eintraege fuer jeden neuen Namen.
+\def\swiss@classifications{public,internal,confidential,strict}
+\newcommand{\swissclassifications}[1]{\gdef\swiss@classifications{#1}}
+
+% Fusszeilenvorlage: UNEXPANDIERT gespeichert (\gdef, kein \edef/\protected@edef
+% -- Makroparametersubstitution expandiert #1 ohnehin nicht). \meta wird erst
+% beim Fusssatz gebunden (spaeterer Abschnitt); ein
+% \swissfootformat{\meta{docid}} darf an dieser Stelle also nicht scheitern,
+% obwohl \meta hier noch gar nicht existiert -- es wird nie expandiert,
+% nur als Tokenfolge abgelegt.
+\def\swiss@footformat{}
+\newcommand{\swissfootformat}[1]{\gdef\swiss@footformat{#1}}
+
+% Dokumentseitige Metadaten (\swissmeta, oeffentlicher Dokumentbefehl).
+% \swiss@meta{key} ist der Zugriff fuer spaetere Verwendungsstellen
+% (Fusszeile, Umschlag, Kolophon): leer, wenn der Schluessel nie gesetzt
+% wurde, statt eines "Undefined control sequence".
+\def\swiss@meta#1{\ifcsname swiss@meta@#1\endcsname\csname swiss@meta@#1\endcsname\fi}
+\define@key{swissmeta}{docid}{\gdef\swiss@meta@docid{#1}}
+\define@key{swissmeta}{version}{\gdef\swiss@meta@version{#1}}
+\define@key{swissmeta}{date}{\gdef\swiss@meta@date{#1}}
+\define@key{swissmeta}{client}{\gdef\swiss@meta@client{#1}}
+\define@key{swissmeta}{classification}{\gdef\swiss@meta@classification{#1}}
+\gdef\swiss@meta@date{\today}% Vorgabe, ueberschreibbar wie jeder andere Schluessel
+\newcommand{\swissmeta}[1]{\setkeys{swissmeta}{#1}\swiss@checkclass}
+
+% \swiss@zapspace{<Text>}: wie \zap@space aus dem Kern, aber fuer den
+% EXPANDIERTEN Wert eines Makros statt fuer eine rohe Parametersubstitution
+% (Abschnitt 2a wendet \zap@space direkt auf #1 an, weil #1 dort schon eine
+% Parametersubstitution ist). Ein Kontrollwort (mehrbuchstabiger Befehlsname)
+% verschluckt ein im Quelltext folgendes Leerzeichen bereits bei der
+% Tokenisierung -- \zap@space\swiss@meta@classification LEERZEICHEN\@empty
+% haette also nie ein Leerzeichen-Token zum Abgrenzen gefunden und wuerde
+% ueber \@empty hinaus weiterlaufen (empirisch bestaetigt: "Paragraph ended
+% before \zap@space was complete"). \swiss@zapspace nimmt den Wert daher als
+% GEKLAMMERTES Argument #1 entgegen: das Leerzeichen im Definitionstext von
+% \zap@space#1 LEERZEICHEN \@empty steht dort hinter einer Parameterreferenz,
+% nicht hinter einem Kontrollwort, und bleibt darum ein echtes Token.
+\def\swiss@zapspace#1{\zap@space#1 \@empty}
+% \swiss@classlevel: 0-basierter Index von \swiss@meta@classification in
+% \swiss@classifications, -1 wenn keine Klassifizierung gesetzt ist.
+% \ifx vergleicht Bedeutung (Tokenfolge), nicht Textinhalt: \@for haengt beim
+% Aufsplitten der Kommaliste \swiss@classifications ein fuehrendes
+% Leerzeichen an jeden Eintrag ausser dem ersten an (derselbe Effekt wie bei
+% \swisssetstrings, siehe Kommentar in Abschnitt 2a), und der Wert aus
+% \setkeys (\swiss@meta@classification) kann seinerseits Leerraum um "="
+% tragen. Ohne Normalisierung vergliche man ein Makro mit Leerzeichen gegen
+% eines ohne und faende nie eine Uebereinstimmung. \swiss@zapspace entfernt
+% -- wie \zap@space in Abschnitt 2a -- ALLE Leerzeichen, nicht nur
+% Randleerzeichen; Klassifizierungsnamen sind wie Sprachschluessel stets
+% leerzeichenfreie Bezeichner, das ist darum unschaedlich. Der doppelte
+% \expandafter setzt \swiss@meta@classification bzw. \swiss@c VOR dem Aufruf
+% von \swiss@zapspace in ein geklammertes Argument um (Standardidiom, um den
+% Wert eines Makros an eine Parameterstelle zu bringen).
+\gdef\swiss@classlevel{-1}
+\def\swiss@checkclass{%
+  \ifcsname swiss@meta@classification\endcsname
+    \gdef\swiss@classlevel{-1}%
+    \edef\swiss@cls@target{%
+      \expandafter\swiss@zapspace\expandafter{\swiss@meta@classification}}%
+    \@tempcnta=0
+    \@for\swiss@c:=\swiss@classifications\do{%
+      \edef\swiss@cls@c{\expandafter\swiss@zapspace\expandafter{\swiss@c}}%
+      \ifx\swiss@cls@c\swiss@cls@target
+        \xdef\swiss@classlevel{\the\@tempcnta}%
+      \fi
+      \advance\@tempcnta by 1}%
+    \ifnum\swiss@classlevel<0
+      \ClassError{swisstex}{Unknown classification
+        '\swiss@meta@classification'}%
+        {Declared vocabulary: \swiss@classifications. Set your own with
+         \string\swissclassifications, or use one of these values.}%
+    \fi
+  \fi}
+
+% Identitaet laden: nach den Optionen und der Sprachtabelle, VOR Schrift
+% (Abschnitt 3) und Farbe (Abschnitt 4) -- beide Abschnitte lesen Werte
+% (\swiss@accent, \swiss@bandvalue, \swissidentityfonts, ...), die eine
+% Identitaetsdatei an dieser Stelle gerade erst setzt.
+\ifx\swiss@identity\@empty\else
+  \IfFileExists{swissidentity-\swiss@identity.sty}%
+    {\RequirePackage{swissidentity-\swiss@identity}}%
+    {\ClassError{swisstex}{Identity file
+       'swissidentity-\swiss@identity.sty' not found}%
+       {Provide a file named swissidentity-\swiss@identity.sty on the
+        TeX search path, or remove the identity= class option.}}%
+\fi
+
+% ---------------------------------------------------------------------
 % 3  Schrift  (I4)
 % ---------------------------------------------------------------------
 \RequirePackage{fontspec}
@@ -284,7 +422,22 @@
 % ---------------------------------------------------------------------
 \RequirePackage{xcolor}
 \definecolor{accent}{RGB}{\swiss@accent}
-\definecolor{band}{RGB}{\swiss@band}
+% band: leer (Vorgabe seit v2.0, siehe Abschnitt 2b) => dieselbe Farbe wie
+% accent (M-B-Regel, eine Signalfarbe statt zwei Rottoene); \swiss@bandvalue
+% ist zu diesem Zeitpunkt bereits final -- gesetzt aus der Klassenoption,
+% einer geladenen Identitaet oder direktem \swisssetcolors in der Praeambel,
+% je nachdem, welcher davon zuletzt lief (Abschnitt 2b). \colorlet statt
+% \definecolor haelt "band" als lebendigen Alias auf "accent": aendert eine
+% Identitaet accent nachtraeglich nochmals (sie sollte nicht, aber falls
+% doch), zieht band mit -- \definecolor mit demselben RGB-Tripel wuerde das
+% Tripel einfrieren.
+\ifx\swiss@bandvalue\@empty
+  \colorlet{band}{accent}%
+  \typeout{swiss:band=accent}%
+\else
+  \definecolor{band}{RGB}{\swiss@bandvalue}%
+  \typeout{swiss:band=own}%
+\fi
 \definecolor{paper}{RGB}{\swiss@paper}
 \definecolor{ink}{RGB}{\swiss@ink}
 \definecolor{quiet}{gray}{0.42}

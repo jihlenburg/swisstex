@@ -1,0 +1,9 @@
+% swissidentity-test.sty -- minimal identity fixture for tests/test_identity.py.
+% Exercises every public setter from swisstex.cls sec. 2b at least once;
+% deliberately omits band= (must resolve to accent, one-red rule) and
+% \swissidentitymeta (not needed by any identity test -- see test_fonts.py's
+% provider.tex for a font-provider-focused fixture).
+\ProvidesPackage{swissidentity-test}[2026/07/29 SwissTeX test identity fixture]
+\swisssetcolors{accent={10,20,30}}
+\swissclassifications{public,internal}
+\swissfootformat{\meta{docid}}

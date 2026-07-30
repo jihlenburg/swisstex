@@ -1,0 +1,14 @@
+\documentclass[identity=test]{swisstex}
+\swissmeta{docid=X-1, classification=internal}
+% Debug typeouts for tests/test_identity.py -- exercise the \swiss@classlevel
+% and \swiss@meta accessors documented as "for later tasks" in the brief:
+% classlevel of "internal" in swissidentity-test.sty's public,internal is 1
+% (0-based); \swiss@meta{client} is unset here and must expand to nothing.
+% @ is catcode-other outside a class/package file, hence \makeatletter here.
+\makeatletter
+\typeout{test:classlevel=\swiss@classlevel}
+\typeout{test:client=[\swiss@meta{client}]}
+\makeatother
+\begin{document}
+Ein Absatz mit Identitaet aus einer Testdatei geladen.
+\end{document}

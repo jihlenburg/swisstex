@@ -89,7 +89,7 @@ Ausgleich mitten auf der Seite genauso wie am Seitenanfang, wo
 \code{topmargin}    & 26mm   & oberer Steg \\
 \code{gridlines}    & 51     & Rasterzeilen je Seite \\
 \code{accent}       & 255,55,37 & Signalfarbe als RGB-Tripel \\
-\code{band}         & 255,105,91 & Farbe der Farbfelder \\
+\code{band}         & leer   & Farbe der Farbfelder; leer = \code{accent} (eine Farbe, seit 2.0) \\
 \code{paper}        & 234,232,208 & Grundton der Seite \\
 \code{ink}          & 26,26,26 & Textfarbe \\
 \code{tint}         & false  & Grundton flächig anlegen \\
@@ -104,6 +104,7 @@ Ausgleich mitten auf der Seite genauso wie am Seitenanfang, wo
 \code{annotationleading} & leer & Durchschuss Kolumnentitel/Kennzeichnung; leer = 2/3 Rastermass \\
 \code{glossleading}      & leer & Durchschuss Glossen und Legenden; leer = 3/4 Rastermass \\
 \code{footnoteleading}   & leer & Durchschuss Fussnoten und Tabellenkörper; leer = 3/4 Rastermass \\
+\code{identity}     & leer   & Name einer Identitätsdatei \code{swissidentity-Name.sty} (Abschnitt~\ref{sec:identitaet}) \\
 \bottomrule
 \end{tabularx}
 \end{swisstable}
@@ -128,6 +129,18 @@ Müller-Brockmann selbst stand die Schmalschrift nicht für Bildlegenden,
 sondern blieb dem laufenden Tabellensatz vorbehalten. Die Klasse folgt dem
 jetzt; Tabellenkörper, Fussnoten und das Kolophon bleiben in der
 Schmalschrift.
+
+\marg{Eine Regel, eine Signalfarbe: \code{band} folgt \code{accent}, bis eine Identität sie ausdrücklich trennt}
+Auch die Klassenoption \code{band} verliert mit Version 2.0 ihren eigenen
+Vorgabewert: Er ist jetzt leer, und ein leerer Wert bedeutet
+\code{band = accent} -- Bandfelder tragen dieselbe Signalfarbe wie
+Auszeichnungen, statt eines zweiten, kaum unterscheidbaren Rots. Das ist die
+M-B-Regel gegen unmotivierte Zweitfarben: eine Signalfarbe pro Dokument,
+nicht zwei. Wer ein eigenständiges Bandrot braucht, setzt \code{band}
+weiterhin -- als Klassenoption wie vor Version 2.0, oder über
+\code{\textbackslash swisssetcolors\{band=...\}} in einer Identitätsdatei
+oder der Präambel (Abschnitt~\ref{sec:identitaet}); der zuletzt ausgeführte
+Aufruf entscheidet.
 
 \section{Schnittstelle}
 
@@ -207,6 +220,54 @@ Fehlt für die eingestellte Sprache ein einzelner Schlüssel, fällt die Klasse
 mit einer Warnung auf die englische Zeichenkette zurück; ein Schlüssel, der
 auch dort nicht existiert, ist ein Fehler. Damit lässt sich eine Sprache auch
 schrittweise nachrüsten, ohne dass ein vergessener Schlüssel unbemerkt bliebe.
+
+\subsection{Identität}
+\label{sec:identitaet}
+
+\marg{Eine Identitätsdatei nutzt ausschliesslich die öffentlichen Setzer, nie internes Patchen}
+Die Klassenoption \code{identity=Name} lädt beim
+\code{\textbackslash documentclass}-Aufruf eine Datei
+\code{swissidentity-Name.sty}, falls gesetzt -- fehlt diese Datei, bricht
+der Lauf mit einer Fehlermeldung ab, die den gesuchten Dateinamen nennt.
+Eine Identitätsdatei setzt Firmen-, Farb-, Schrift- und
+Klassifizierungsangaben ausschliesslich über öffentliche Befehle, die
+ebenso in der Präambel eines Dokuments ohne eigene Identitätsdatei
+aufrufbar sind:
+
+\begin{swisstable}{Öffentliche Identitätsschnittstelle}
+\begin{tabularx}{\textcolumn}[t]{@{}S{40mm}@{\hspace{3mm}}L@{}}
+\toprule
+\tabhead{Aufruf} & \tabhead{Zweck} \\
+\midrule
+\code{\textbackslash swissidentitymeta\{...\}} & Firmenname, Impressum, Web-Adresse \\
+\addlinespace[3.5pt]
+\code{\textbackslash swisssetcolors\{...\}} & Farbrollen \code{accent}, \code{paper}, \code{ink}, optional \code{band} \\
+\addlinespace[3.5pt]
+\code{\textbackslash swisslogofiles\{...\}} & Logo-Dateien für Umschlag und Kolophon \\
+\addlinespace[3.5pt]
+\code{\textbackslash swissclassifications\{...\}} & geordnetes Klassifizierungsvokabular \\
+\addlinespace[3.5pt]
+\code{\textbackslash swissfootformat\{...\}} & Vorlage der Fusszeile \\
+\addlinespace[3.5pt]
+\code{\textbackslash swissmeta\{...\}} & dokumentseitige Angaben:
+  \code{docid}, \code{version}, \code{date}, \code{classification}, \code{client} \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+
+Alle Setzer wirken global, unabhängig von der Gruppierung an der
+Aufrufstelle -- wie \code{\textbackslash swisssetstrings} in
+Abschnitt~\ref{sec:sprachen}. \code{\textbackslash swissmeta} ist der
+einzige dokumentseitige Befehl der Gruppe: Er trägt die Angaben eines
+einzelnen Dokuments, \code{date} setzt sich ohne eigene Angabe auf
+\code{\textbackslash today}. Die Klassifizierung ist ein Wert aus dem mit
+\code{\textbackslash swissclassifications} gesetzten Vokabular (Vorgabe:
+\code{public}, \code{internal}, \code{confidential}, \code{strict}, siehe
+Abschnitt~\ref{sec:sprachen}); ein Wert ausserhalb dieses Vokabulars ist ein
+Fehler, kein stiller Rückfall. Ohne \code{identity=} bleibt die Klasse bei
+ihrer Vorgabe. Fusszeile, Umschlag und Kolophon lesen diese Angaben; eine
+vollständige Beschreibung mit Beispieldatei folgt in einem eigenen
+Abschnitt dieses Handbuchs.
 
 \subsection{Tabellen}
 
@@ -288,9 +349,10 @@ weissem Satz. \code{\textbackslash swisscover} legt eine randabfallende
 Umschlagseite an, \code{tint=true} den Grundton über alle Seiten.
 \end{swissband}
 
-Die Palette ist voreingestellt auf einen warmen Grundton, ein Signalrot und
-ein etwas helleres Bandrot. Alle vier Werte lassen sich als Klassenoption
-setzen: \code{paper}, \code{accent}, \code{band}, \code{ink}.
+Die Palette ist voreingestellt auf einen warmen Grundton und ein Signalrot;
+das Farbfeld trägt seit Version 2.0 standardmässig dieselbe Signalfarbe
+statt eines eigenen, helleren Bandrots. Alle vier Rollen lassen sich als
+Klassenoption setzen: \code{paper}, \code{accent}, \code{band}, \code{ink}.
 
 \subsection{Blindzeile über dem Farbfeld}
 
