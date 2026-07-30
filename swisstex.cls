@@ -197,19 +197,58 @@
 \RequirePackage{polyglossia}
 \setdefaultlanguage{\swiss@lang}
 
-\setmainfont{\swiss@sans}[
-  Extension = .otf, UprightFont = *-regular, ItalicFont = *-italic,
-  BoldFont = *-bold, BoldItalicFont = *-bolditalic, Ligatures = TeX]
+\RequirePackage[fleqn]{amsmath}
+\RequirePackage{unicode-math}
+\setlength{\mathindent}{0pt}
+
+% \condensed selbst -- die fontspec-Familie hinter \condensed -- wird HIER,
+% einmalig und sofort (nicht ueber die Weiche unten), mit der Vorgabeschrift
+% deklariert. Grund, empirisch geprueft: fontspec unterscheidet
+% \newfontfamily (deklarieren, wie \newcommand) von \renewfontfamily
+% (umdefinieren, wie \renewcommand -- verlangt eine bestehende Deklaration).
+% Ein Identitaetsanbieter tauscht die Schrift hinter \condensed per
+% \renewfontfamily aus (siehe tests/fixtures/provider.tex); liegt \condensed
+% zu diesem Zeitpunkt noch NICHT vor, bricht \renewfontfamily mit
+% "\RenewDocumentCommand with a command that was never defined" ab und
+% \condensed bleibt danach spurlos undefiniert (xparse ignoriert die
+% gesamte Definition, statt einen harten Fehler zu werfen -- kein
+% Buildabbruch, aber ein spaeteres "Undefined control sequence" an jeder
+% Aufrufstelle). Die Deklaration steht deshalb bewusst ausserhalb der
+% Anbieter-Weiche, mit der Vorgabeschrift bestueckt: der Vorgabepfad
+% braucht sie unveraendert, ein Identitaetsanbieter findet sie vor und
+% ersetzt nur die Schrift dahinter.
 \newfontfamily\condensed{\swiss@sanscondensed}[
   Extension = .otf, UprightFont = *-regular, ItalicFont = *-italic,
   BoldFont = *-bold, BoldItalicFont = *-bolditalic, Ligatures = TeX]
 
-\RequirePackage[fleqn]{amsmath}
-\RequirePackage{unicode-math}
-\setmathfont{\swiss@mathfont}
-\setmathfont[range=\mathup]{\swiss@sansname}
-\setmathfont[range=\mathit]{\swiss@sansnameitalic}
-\setlength{\mathindent}{0pt}
+% Anbieter-Weiche (I4): die Vorgabe ist die Grundschrift der Klasse
+% (v1.3-Heros-Block, unveraendert); eine Identitaetsdatei kann sie im
+% Ganzen ersetzen, indem sie \swissidentityfonts VOR diesem Punkt
+% definiert (siehe Task 4). Keine Mischung -- der Anbieter ersetzt den
+% Block vollstaendig, statt einzelne Zeilen zu ueberschreiben.
+\newcommand{\swiss@defaultfonts}{%
+  \setmainfont{\swiss@sans}[
+    Extension = .otf, UprightFont = *-regular, ItalicFont = *-italic,
+    BoldFont = *-bold, BoldItalicFont = *-bolditalic, Ligatures = TeX]%
+  \setmathfont{\swiss@mathfont}%
+  \setmathfont[range=\mathup]{\swiss@sansname}%
+  \setmathfont[range=\mathit]{\swiss@sansnameitalic}}
+
+% Die Weiche selbst laeuft bei \AtBeginDocument statt sofort: fontspec
+% traegt \setmainfont/\newfontfamily an dieser Stelle zuverlaessig mit,
+% und erst am Beginndokument-Punkt steht sicher fest, ob eine
+% Identitaetsdatei \swissidentityfonts definiert hat (sie wird zwischen
+% \documentclass und \begin{document} eingebunden). Die Registrierung
+% steht bewusst HIER in Abschnitt 3, VOR den \AtBeginDocument-Bloecken
+% aus Abschnitt 4 (\color{ink}) und Abschnitt 5 (\fontsize...\selectfont
+% fuer den Grundtext): \AtBeginDocument haengt seine Bloecke der Reihe
+% nach an (siehe LaTeX-Kern, \g@addto@macro), sie laufen also in der
+% Registrierreihenfolge. Liefe die Schriftweiche spaeter, waere beim
+% \selectfont des Grundtexts noch keine Schrift geladen, und der
+% Grundtext griffe auf die vorherige (Latin-Modern-)Vorgabe zurueck.
+\AtBeginDocument{%
+  \ifcsname swissidentityfonts\endcsname\swissidentityfonts
+  \else\swiss@defaultfonts\fi}
 
 \RequirePackage[protrusion=true,expansion=false]{microtype}
 
@@ -320,6 +359,13 @@
 
 % Weiss auf Farbe, fuer Baender und Umschlaege
 \newcommand{\reverse}[1]{\textcolor{white}{#1}}
+
+% Codebeispiele und Bezeichner: Schmalschrift auf Rastermass, unabhaengig
+% vom Schriftanbieter (nie Latin Modern, auch wenn \swisscode vor der
+% Anbieterweiche im Text steht -- \condensed ist zu diesem Zeitpunkt
+% bereits geladen, da \swisscode selbst erst beim Aufruf im Dokument
+% expandiert, also nach \AtBeginDocument).
+\newcommand{\swisscode}[1]{{\condensed\fontsize{8.5}{\gridunit}\selectfont #1}}
 
 
 % ---------------------------------------------------------------------

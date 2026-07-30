@@ -3,7 +3,7 @@
 \setrunningtitle{SwissTeX \textbar{} Klassendokumentation}
 \hypersetup{pdftitle={SwissTeX -- Satzsystem nach der Neuen Schweizer Schule}}
 
-\newcommand{\code}[1]{{\condensed\fontsize{8.5}{\gridunit}\selectfont #1}}
+\let\code\swisscode
 
 \begin{document}
 
@@ -144,6 +144,10 @@ Schmalschrift.
 \addlinespace[3.5pt]
 \code{\textbackslash swisssetstrings\{...\}\{...\}} & Sprache definieren
   oder ergänzen (Abschnitt~\ref{sec:sprachen}) \\
+\addlinespace[3.5pt]
+\code{\textbackslash swisscode\{...\}} & Schmalschrift 8,5\,pt auf
+  Rastermass, für Code und Bezeichner; \code{\textbackslash code} ist ein
+  Alias dafür \\
 \addlinespace[3.5pt]
 \code{lead} & Vorspann, ein Grad grösser als der Grundtext \\
 \addlinespace[3.5pt]
