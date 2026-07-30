@@ -32,12 +32,17 @@ Geprüft werden:
   A16 Schriftinventar  Nur deklarierte Schriftfamilien sind eingebettet.
   A17 Glossenlänge     Die Glossenzone trägt Beschriftung, nicht Fliesstext
                        (I3): kein Glossenblock über sechs Zeilen.
+  A18 Marginalien im Satzspiegel  Keine Glosse ragt unter die Satzspiegel-
+                       Unterkante hinaus (marginfix schiebt sie andernfalls
+                       nach oben).
   (A14, zweisprachiger Satz, ist für eine spätere Ausbaustufe vorgesehen und
   hier nicht implementiert.)
 
 A10-A13/A15/A16/A17 lesen ihre Kennzahlen aus der Sidecar-Datei
 <jobname>.swisscheck (siehe unten); ohne sie überspringen sie sich sauber
-(0 geprüft, kein Fehler).
+(0 geprüft, kein Fehler). A18 braucht keine Sidecar-Datei -- wie A1-A9 misst
+es direkt gegen das Raster (CLI/Vorgabe), gridlines kommt bei vorhandener
+Sidecar-Datei aus deren Deklaration.
 
 Aufruf:
     python3 swisscheck.py bericht.pdf [--tex bericht.tex]
@@ -1206,6 +1211,73 @@ def pruefe_glossenlaenge(pdf, r: Raster, maxzeilen=6) -> Befund:
     return b
 
 
+def pruefe_marginalueberstand(pdf, r: Raster, tol=3.0) -> Befund:
+    """A18: Keine Marginalglosse ragt unter die Satzspiegel-Unterkante.
+
+    Ursprung: SwissTeX 1.3.1 (Produktionsfork), dort A10 -- hier als A18
+    uebernommen, weil A10 in dieser Fassung bereits die Fusszeile prueft.
+    marginfix (\\RequirePackage in swisstex.cls Sec. 2, nach
+    \\reversemarginpar) schiebt eine Glosse, die am Seitenende ueber die
+    Satzspiegel-Unterkante hinausragen wuerde, nach oben, bis ihre
+    Unterkante auf der Satzspiegel-Unterkante liegt. Diese Pruefung misst
+    genau das im fertigen PDF.
+
+    Die Unterkante folgt geometrisch aus dem Raster (topmargin plus
+    gridlines Rasterzeilen) -- wie A1-A9 arbeitet sie OHNE Sidecar-Datei;
+    ist eine vorhanden, liefert sie `r.gridlines` deklariert, sonst gilt
+    die Kommandozeilen-Vorgabe (Raster-Feld, wie bei A7).
+
+    Geprueft werden nur Glossen im 7,5-pt-Grad (die Groesse unserer
+    Marginalglossen, siehe \\marg in swisstex.cls); der Kolophon im
+    Fussbereich hat 7,0 pt und ist bewusst ausgenommen -- dasselbe
+    Groessenfenster wie im Original.
+
+    Abweichung vom Original, empirisch noetig: v2.0 kennt seit der
+    Identitaetsschicht eine Klassifizierungsmarke in der Fusszone, die
+    ERSTE (bevorzugte) Stufe von \\swiss@trackedfit laeuft ebenfalls im
+    7,5-pt-Grad (swisstex.cls Abschnitt 10, \\swiss@markset) -- ein reines
+    Groessenfenster wie im Original meldete sie faelschlich als
+    ueberhaengende Glosse (an acme-demo.pdf entdeckt: "S.2: Glosse ragt
+    40.3 pt unter die Satzspiegel-Unterkante", obwohl marginfix nichts zu
+    tun hatte). Gepruefte Zeichen werden darum zuerst wie bei A17 zu
+    Bloecken zusammengefasst (naechste Grundlinie hoechstens zwei
+    Rasterzeilen entfernt); ein Block, der schon UNTERHALB der
+    Satzspiegel-Unterkante BEGINNT, ist per Definition kein Marginalien-
+    Ueberstand (der faengt im Satzspiegel an und ragt hinaus), sondern
+    Fusszonen-Inhalt, und wird uebersprungen."""
+    b = Befund("A18", "Marginalien im Satzspiegel")
+    glossgrenze = (r.outermargin + r.glosswidth) * MM
+    unterkante = r.topmargin * MM + r.gridlines * r.gridunit
+    for i, seite in enumerate(pdf.pages, 1):
+        zaehler: dict[float, int] = {}
+        for c in seite.chars:
+            if c["x0"] >= glossgrenze or not (7.2 < c.get("size", 0) < 7.8):
+                continue
+            y = round(seite.height - c["matrix"][5], 2)
+            zaehler[y] = zaehler.get(y, 0) + 1
+        baselinien = sorted(zaehler)
+        if not baselinien:
+            continue
+        block = [baselinien[0]]
+        bloecke = [block]
+        for y in baselinien[1:]:
+            if y - block[-1] <= 2 * r.gridunit:
+                block.append(y)
+            else:
+                block = [y]
+                bloecke.append(block)
+        for blk in bloecke:
+            if blk[0] >= unterkante:
+                continue  # beginnt bereits in der Fusszone, keine Glosse
+            b.geprueft += 1
+            d = blk[-1] - unterkante
+            if d > tol:
+                b.verstoesse.append(
+                    f"S.{i}: Glosse ragt {d:.1f} pt unter die "
+                    f"Satzspiegel-Unterkante")
+    return b
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="SwissTeX-Konformitätsprüfung")
     ap.add_argument("pdf")
@@ -1248,6 +1320,7 @@ def main() -> int:
             pruefe_farbrollen(pdf, r),
             pruefe_schriftinventar(pdf, r),
             pruefe_glossenlaenge(pdf, r),
+            pruefe_marginalueberstand(pdf, r),
         ]
         seiten = len(pdf.pages)
 

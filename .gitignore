@@ -15,3 +15,8 @@ fonts/.venv/
 fonts/build/
 __pycache__/
 *.pyc
+# Regressionsvorlagen unter tests/fixtures/ werden per pytest in tmp_path
+# gebaut (siehe tests/conftest.py), nicht hier -- eine per `make`/`make check`
+# lokal gebaute PDF daneben ist Baumuell, kein Artefakt.
+tests/fixtures/*.pdf
+swisstex-dist.tar.gz

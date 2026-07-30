@@ -1,0 +1,52 @@
+% A18: eine Glosse, deren Unterkante ohne marginfix unter die
+% Satzspiegel-Unterkante ragen wuerde. Der Grundtext fuellt die Seite fast
+% vollstaendig, sodass der \marg-Aufruf nahe am Seitenende steht; die Glosse
+% selbst ist bewusst lang genug, um bei blossem \marginpar (ohne marginfix)
+% deutlich ueber die Rasterfusslinie hinauszulaufen -- und verstoesst damit
+% zugleich gegen A17 (Glossenlaenge), was fuer diese Vorlage unerheblich
+% ist: sie prueft ausschliesslich A18, nicht die volle Konformitaet (wie
+% broken-head-image.tex fuer A11). swisscheck A18 misst den Ueberstand im
+% fertigen PDF; marginfix schiebt die Glosse zurueck in den Satzspiegel.
+\documentclass{swisstex}
+\setrunningtitle{Fixture}
+\begin{document}
+\section{Abschnitt}
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+Der Inhalt selbst ist bedeutungslos und dient nur der Fuellung der Seite.
+
+\marg{Diese Glosse ist absichtlich lang genug, um weit ueber ein Dutzend
+Zeilen in der schmalen Glossenspalte zu laufen, damit ihre Unterkante ohne
+marginfix deutlich unter die Satzspiegel-Unterkante ragen wuerde, sofern
+sie nahe am Seitenende beginnt und die Klasse sie nicht mehr nach oben
+verschiebt, bevor die Seite endet und der naechste Rasterblock beginnt.}
+Nach der Glosse folgt noch ein kurzer Absatz, damit der Grundtext bis zum
+Seitenende reicht.
+\end{document}

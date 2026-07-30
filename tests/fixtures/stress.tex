@@ -1,0 +1,107 @@
+% Port aus SwissTeX 1.3.1 (Produktionsfork, test-stress.tex), unveraendert:
+% keine \swisscover-/\swisstitle-Aufrufe, nichts an v2.0 anzupassen.
+% Belastungstest fuer Listen, Fussnoten, Verweise und Randfaelle im Raster.
+\documentclass{swisstex}
+\setrunningtitle{SwissTeX \textbar{} Belastungstest}
+\begin{document}
+
+\swisstitle{Belastungstest}{Elemente im Raster}{Was bricht, was hält}
+
+\section{Listen}
+
+\subsection{Aufzählung}
+
+Vor der Liste ein Absatz, damit die Grundlinie bekannt ist.
+
+\begin{itemize}
+\item Erster Punkt in einer Zeile.
+\item Zweiter Punkt, der über zwei Zeilen läuft und deshalb den
+      Zeilenumbruch innerhalb des Eintrags zeigt.
+\item Dritter Punkt.
+\end{itemize}
+
+Nach der Liste ein Absatz.
+
+\subsection{Nummerierung}
+
+\begin{enumerate}
+\item Erster Schritt.
+\item Zweiter Schritt.
+\end{enumerate}
+
+Nach der Nummerierung ein Absatz.
+
+\subsection{Verschachtelt}
+
+\begin{itemize}
+\item Aussen.
+  \begin{itemize}
+  \item Innen.
+  \end{itemize}
+\item Wieder aussen.
+\end{itemize}
+
+Nach der Verschachtelung ein Absatz.
+
+\section{Fussnoten und Verweise}
+
+\subsection{Fussnote}
+
+Ein Satz mit einer Fussnote.\footnote{Der Text der Fussnote.} Danach folgt
+weiterer Satz, damit sich die Wirkung auf die Grundlinien zeigt.
+
+Ein zweiter Absatz nach der Fussnote.
+
+\subsection{Dritte Gliederungsebene}
+
+\subsubsection{Untergeordnet}
+
+Text unterhalb einer dritten Ebene, sofern die Klasse sie kennt.
+
+\section{Weitere Blöcke}
+
+\subsection{Zitat}
+
+\begin{quote}
+Ein abgesetztes Zitat über zwei Zeilen, das prüft, ob die Umgebung das
+Raster hält oder verschiebt.
+\end{quote}
+
+Nach dem Zitat ein Absatz.
+
+\subsection{Beschreibung}
+
+\begin{description}
+\item[Erstens] Erklärung dazu.
+\item[Zweitens] Weitere Erklärung.
+\end{description}
+
+Nach der Beschreibung ein Absatz.
+
+\subsection{Vorformatiert}
+
+\begin{verbatim}
+zeile eins
+zeile zwei
+\end{verbatim}
+
+Nach dem vorformatierten Block ein Absatz.
+
+\subsection{Langer Absatz über den Seitenumbruch}
+
+Dieser Absatz soll lang genug sein, um einen Seitenumbruch zu erzwingen und
+damit zu prüfen, ob das Raster auf der Folgeseite wieder korrekt aufsetzt.
+Der Inhalt selbst ist bedeutungslos und dient nur der Länge. Der Inhalt
+selbst ist bedeutungslos und dient nur der Länge. Der Inhalt selbst ist
+bedeutungslos und dient nur der Länge. Der Inhalt selbst ist bedeutungslos
+und dient nur der Länge. Der Inhalt selbst ist bedeutungslos und dient nur
+der Länge. Der Inhalt selbst ist bedeutungslos und dient nur der Länge. Der
+Inhalt selbst ist bedeutungslos und dient nur der Länge. Der Inhalt selbst
+ist bedeutungslos und dient nur der Länge. Der Inhalt selbst ist
+bedeutungslos und dient nur der Länge. Der Inhalt selbst ist bedeutungslos
+und dient nur der Länge. Der Inhalt selbst ist bedeutungslos und dient nur
+der Länge. Der Inhalt selbst ist bedeutungslos und dient nur der Länge.
+
+Ein Absatz nach dem langen Absatz.
+
+\end{document}

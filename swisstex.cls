@@ -135,6 +135,10 @@
 \typeout{swiss:headsep=\the\dimexpr2\gridunit\relax}
 \typeout{swiss:footskip=\the\dimexpr3\gridunit\relax}
 \reversemarginpar
+% marginfix haelt Marginalien im Satzspiegel: ragt eine Glosse am Seitenende
+% ueber die Unterkante hinaus, wird sie nach oben geschoben, bis ihre
+% Unterkante auf der Satzspiegel-Unterkante liegt. Pruefung A18 misst das.
+\RequirePackage{marginfix}
 
 % ---------------------------------------------------------------------
 % 2a  Sprachtabelle

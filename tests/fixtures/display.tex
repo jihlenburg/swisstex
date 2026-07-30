@@ -1,0 +1,50 @@
+% Port aus SwissTeX 1.3.1 (Produktionsfork, test-display.tex), Umschlag auf
+% die v2.0-Slot-Form gehoben: die alte Positionsform
+% \swisscover{K}{T}{U}{F} plus \renewcommand{\swisscoverglyph}{S} wird zu
+% \swisscover*{kicker=..., ..., glyph=S} -- genau der Uebergang, fuer den
+% der Abkuendigungsmechanismus (swisstex.cls Abschnitt 10a) gebaut ist. Die
+% Vorlage uebt bewusst die MODERNE Form aus, siehe
+% tests/test_regression_docs.py::test_display_build_is_warning_free.
+\documentclass[tint=true]{swisstex}
+\setrunningtitle{SwissTeX \textbar{} Anzeigengrade und Farbfelder}
+\begin{document}
+
+\swisscover*{kicker=Musterblatt, title=SwissTeX,
+  subtitle={Anzeigengrade, Farbfelder, Gliederung},
+  foot={TeX Gyre Heros \textbar{} Raster 13,5\,pt \textbar{} Satzspiegel 105\,mm},
+  glyph=S}
+
+\section{Anzeigengrade}
+
+\subsection{Vom Raster abgeleitet}
+
+Jeder Schaugrad hat einen Durchschuss von ganzen Rasterzeilen. Der
+Schriftgrad folgt daraus, grosse Grade laufen enger.
+
+\begin{gridblock}
+{\swissdisplay{4}\bfseries Raster}\par
+{\swissdisplay{3}Grotesk}\par
+{\swissdisplay{2}Satzspiegel}\par
+{\swissdisplay{1}Basislinienraster}
+\end{gridblock}
+
+Nach den Schaugraden setzt der Grundtext wieder auf dem Raster auf.
+
+\section{Farbfeld}
+
+\subsection{Band über das volle Mass}
+
+\begin{swissband}
+{\swissdisplay{2}\bfseries Kunsthalle}\par\vspace{6pt}
+Ein Farbfeld läuft über Marginalspalte und Satzspiegel. Der Satz steht in
+Weiss, die Höhe bleibt am Raster.
+\end{swissband}
+
+Nach dem Band setzt der Grundtext wieder auf dem Raster auf, ohne Versatz.
+
+\subsection{Zweiter Absatz}
+
+Damit lässt sich prüfen, ob die Rasterbindung über mehrere Blöcke hinweg
+hält.
+
+\end{document}
