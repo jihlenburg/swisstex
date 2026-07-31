@@ -16,6 +16,8 @@
 
 import sys
 
+import pdfplumber
+
 from conftest import ROOT, assert_clean_refs, build_doc, swisscheck
 
 sys.path.insert(0, str(ROOT))
@@ -28,25 +30,34 @@ def test_stress_builds_across_a_page_break(tmp_path):
     assert_clean_refs(r.log, context="stress.tex")
 
 
-def test_stress_swisscheck_finds_a_real_verbatim_font_gap(tmp_path):
-    """Kein weichgespülter Erfolgstest: stress.tex ist die erste Vorlage in
-    diesem Repository, die \\begin{verbatim} benutzt, und deckt damit eine
-    echte, vorbestehende Lücke auf, die swisstex.cls Abschnitt 6 selbst
-    offenlegt (verbatim wird dort nur fürs Rasterfangnetz registriert, nie
-    auf eine deklarierte Familie umgeschaltet, siehe den Kommentar über
-    \\gridsnapenv dort) -- ein I4-Verstoss (\"eine Schriftfamilie\"), den A16
-    zurecht als FEHLER meldet ('LMMono10-Regular' passt zu keiner
-    deklarierten Familie). Portierungsbericht dokumentiert den Befund; diese
-    Klasseneinschränkung zu beheben ist ausserhalb des Ported-Umfangs."""
+def test_stress_swisscheck_verbatim_font_gap_is_closed(tmp_path):
+    """War RED: stress.tex war die erste Vorlage in diesem Repository, die
+    \\begin{verbatim} benutzt, und deckte damit eine echte, vorbestehende
+    Lücke auf -- verbatim bekam nur den Rasterfang (\\gridsnapenv), nie eine
+    deklarierte Schriftfamilie, und embettete darum die LaTeX-Vorgabe
+    ('LMMono10-Regular'), ein I4-Verstoss, den A16 zurecht als FEHLER
+    meldete. Portierungsbericht dokumentierte den Befund als ausserhalb des
+    damaligen Portierungsumfangs.
+
+    Nutzerentscheid vom 2026-07-31 schliesst die Lücke: I4 liest sich seither
+    als \"eine Familie plus deklarierte Mathe- und Code-Begleiter\" --
+    \\verbatim@font (treibt sowohl die verbatim-Umgebung als auch \\verb, siehe
+    latex.ltx) läuft jetzt auf \\swisscodeface, der zweite deklarierte
+    Begleiter neben der Mathe-Schrift, Vorgabe DejaVu Sans Mono. A16 lässt
+    genau diese Familie zusätzlich zu (Sidecar-Schlüssel codeface=...) --
+    derselbe Mechanismus wie für mainfamily/condensedfamily/mathfont."""
     r = build_doc(ROOT / "tests/fixtures/stress.tex", tmp_path)
     assert r.returncode == 0, r.log[-2000:]
+    assert "codeface" in r.sidecar and r.sidecar["codeface"], r.sidecar
+    with pdfplumber.open(r.pdf) as p:
+        fonts = {c["fontname"] for pg in p.pages for c in pg.chars}
+    assert any("DejaVuSansMono" in f for f in fonts), fonts
+    assert not any("LMMono" in f for f in fonts), fonts
     code, out = swisscheck(r.pdf)
-    assert code != 0, out
-    a16 = next(z for z in out.splitlines() if z.strip().startswith("A16"))
-    assert "FEHLER" in a16, out
-    assert "LMMono10" in out, out
-    # Alle anderen Prüfungen -- inklusive A18 -- bleiben davon unberührt.
-    for kennung in ("A1", "A2", "A3", "A4", "A7", "A8", "A13", "A17", "A18"):
+    assert code == 0, out
+    # Alle Prüfungen bleiben ok -- A16 eingeschlossen, nicht nur die, die
+    # von der Vorlage unberührt waren.
+    for kennung in ("A1", "A2", "A3", "A4", "A7", "A8", "A13", "A16", "A17", "A18"):
         zeile = next(z for z in out.splitlines() if z.strip().startswith(kennung))
         assert "ok" in zeile, (kennung, zeile, out)
 

@@ -19,7 +19,7 @@ und -höhe, Steg, Marginalspalte, Bund, Ziffernzone, Satzspiegel, oberer
 Steg, Rasterzeilenzahl und Rastermass (siehe `swisstex-manual.tex`,
 Abschnitt "Invarianten"). Rechte und untere Stege sind berechnet, nicht
 gesetzt. Wer eine Kennzahl ändert, ändert das System konsistent mit. Diese
-zehn sind der geometrische Kern; die Klasse kennt insgesamt 28
+zehn sind der geometrische Kern; die Klasse kennt insgesamt 29
 Klassenoptionen (Kennzahlen plus Farbrollen, Schriftdateien, Sprache,
 Verhalten -- siehe die Optionstabelle im Handbuch).
 
@@ -50,7 +50,7 @@ Klasse selbst:
 |---|---|
 | `\swissidentitymeta` | Firma, Impressum, Web |
 | `\swisssetcolors` | `accent`/`paper`/`ink`, optional `band` (leer = Alias von `accent`, ein Signalfarben-System) |
-| `\newcommand{\swissidentityfonts}{...}` | den Schriftlieferanten -- muss `\condensed` mit `\renewfontfamily` erneuern (I4) |
+| `\newcommand{\swissidentityfonts}{...}` | den Schriftlieferanten -- muss `\condensed` mit `\renewfontfamily` erneuern (I4); `\swisscodeface`, der Code-Begleiter, ist ebenso überschreibbar, aber optional |
 | `\swisslogofiles` | `cover=`/`colophon=`-Logodateien plus `logofonts=` (Fremdschriften, die ein eingebundenes Logo mitbringt) |
 | `\swissclassifications` | das geordnete Klassifizierungsvokabular |
 | `\swissfootformat` | die Fusszeilenvorlage (`\meta{key}`-Platzhalter) |
@@ -89,32 +89,43 @@ verpackt.
 
 Voraussetzungen über eine Basis-TeX-Live-Installation hinaus: `tex-gyre`
 (TeX Gyre Heros als Univers-Analogon), `tex-gyre-math` (liefert
-`texgyredejavu-math.otf`, Familienname "TeX Gyre DejaVu Math"), `titlesec`,
+`texgyredejavu-math.otf`, Familienname "TeX Gyre DejaVu Math"), `dejavu`
+(liefert `DejaVuSansMono.ttf` in vier Schnitten, Familienname "DejaVu Sans
+Mono" -- Vorgabe für `codeface`, den Code-Begleiter), `titlesec`,
 `needspace`, `enumitem`, `marginfix` (hält Marginalien im Satzspiegel,
 siehe Abschnitt "Marginalien" unten), deutsche Trennmuster
 (`texlive-lang-german`), Python 3 mit `pdfplumber` für `swisscheck.py`.
 
 ```
-tlmgr install tex-gyre tex-gyre-math titlesec needspace enumitem marginfix
+tlmgr install tex-gyre tex-gyre-math dejavu titlesec needspace enumitem marginfix
 ```
 
 An `tlmgr init-usertree` und `--usermode` anhängen, falls der Systembaum
 nicht beschreibbar ist. Das Paket `dejavu-otf` wird NICHT gebraucht -- es
-enthält nur die alte `.sty`-Unterstützung, nicht die Mathematikschrift.
+enthält nur die alte `.sty`-Unterstützung, nicht die Mathematikschrift; das
+hier installierte Paket heisst `dejavu` (ohne `-otf`) und liefert die
+TrueType-Dateien, die `codeface` per Familienname lädt.
 
 **macOS-Eigenheit:** Die Klasse lädt die Grundschrift über den Dateinamen
-(über kpathsea, funktioniert aus jedem texmf-Baum), die Mathematikschriften
-aber über den Familiennamen (`\setmathfont`), und XeTeX löst Familiennamen
-unter macOS über CoreText auf, das texmf-Bäume nicht sieht. Die
-namentlich geladenen Schriften -- `texgyreheros-*.otf` (für die
-`range=\mathup`/`\mathit`-Ladungen) und `texgyredejavu-math.otf` -- müssen
-darum zusätzlich nach `~/Library/Fonts/` kopiert werden, sonst bricht der
-Bau bei `\setmathfont` ab, obwohl `kpsewhich` die Dateien findet. Dieselbe
-Eigenheit trifft eine Identität, deren `\swissidentityfonts` ebenfalls über
-den Familiennamen statt über den Dateinamen lädt -- `swissidentity-acme.sty`
-ruft `\setmainfont{SwissTeX Grotesk}` auf, darum muss auch
-`fonts/dist/SwissTeXGrotesk*.ttf` dort liegen (siehe unten, `make install`
-im Bau der Schrift).
+(über kpathsea, funktioniert aus jedem texmf-Baum), die Mathematik- und
+die Code-Begleiterschrift aber über den Familiennamen (`\setmathfont` bzw.
+`\swisscodeface`, siehe `codeface`), und XeTeX löst Familiennamen unter
+macOS über CoreText auf, das texmf-Bäume nicht sieht. Die namentlich
+geladenen Schriften -- `texgyreheros-*.otf` (für die
+`range=\mathup`/`\mathit`-Ladungen), `texgyredejavu-math.otf` und die vier
+Schnitte von `DejaVuSansMono*.ttf` -- müssen darum zusätzlich nach
+`~/Library/Fonts/` kopiert werden, sonst bricht der Bau bei `\setmathfont`
+bzw. beim ersten `\swisscodeface`-Aufruf (verbatim/`\verb`) ab, obwohl
+`kpsewhich` die Dateien findet. In dieser Umgebung reichte das blosse
+Kopieren nicht sofort: CoreTexts Schriftregistrierung (`fontd`) hatte die
+frisch kopierten DejaVu-Sans-Mono-Dateien zunächst nicht gesehen, obwohl
+`fc-list`/`mdls` sie bereits kannten -- `killall fontd` gefolgt von
+`mdimport -r` auf jede `.ttf`-Datei hat das Zwischenspeicherproblem
+behoben. Dieselbe Eigenheit trifft eine Identität, deren
+`\swissidentityfonts` ebenfalls über den Familiennamen statt über den
+Dateinamen lädt -- `swissidentity-acme.sty` ruft `\setmainfont{SwissTeX
+Grotesk}` auf, darum muss auch `fonts/dist/SwissTeXGrotesk*.ttf` dort
+liegen (siehe unten, `make install` im Bau der Schrift).
 
 ```
 cp swisstex.cls <projektverzeichnis>/
@@ -169,9 +180,10 @@ Details zur Herkunft und den angewendeten Korrekturen: `fonts/README.md`.
 | `sans`, `sanscondensed` | texgyreheros, texgyreheroscn | Schriftdateien |
 | `sansname`, `sansnameitalic` | TeX Gyre Heros | Familiennamen für den Formelsatz |
 | `mathfont` | TeX Gyre DejaVu Math | Mathematikschrift |
+| `codeface` | DejaVu Sans Mono | Code-Begleiterschrift für `verbatim`/`\verb` (I4, siehe unten) |
 | `identity` | leer | lädt `swissidentity-<name>.sty` (siehe oben) |
 
-Die vollständige Tabelle aller 28 Optionen steht in `swisstex-manual.tex`,
+Die vollständige Tabelle aller 29 Optionen steht in `swisstex-manual.tex`,
 Abschnitt "Klassenoptionen" -- `swisstex.cls` Abschnitt 1 ist die
 Quelle der Wahrheit, die Tabelle folgt ihr.
 
@@ -418,9 +430,10 @@ Raster als wegdriftend, mit etwa 0,05 pt je Zeile.
 - Satz in Farbfeldern ist Rahmensatz: er folgt dem Feld, nicht dem
   Seitenraster, und die Spaltenregel gilt in ihm nicht. `swisscheck` nimmt
   Farbfelder und randabfallende Umschlagseiten entsprechend aus.
-- `verbatim` bekommt seinen Rasterfang automatisch, aber keine deklarierte
-  Schriftfamilie -- ein Verbatim-Block bricht darum I4/A16 (eingebettete
-  Fremdschrift). Nicht erfasste Fremdumgebungen können ausserdem das Raster
+- `verbatim` und `\verb` laufen auf `\swisscodeface`, dem zweiten
+  deklarierten Begleiter neben der Mathe-Schrift (I4, Vorgabe `codeface` =
+  DejaVu Sans Mono); `\swisscode` bleibt für Bezeichner mitten im Fliesstext
+  auf `\condensed`. Nicht erfasste Fremdumgebungen können das Raster
   verschieben, bis sie über `\gridsnapenv` nachgetragen sind.
 - Die Klasse setzt XeLaTeX voraus (OpenType, `fontspec`, `unicode-math`).
 - Univers selbst ist nicht frei. TeX Gyre Heros (MIT-verwandt, siehe unten)

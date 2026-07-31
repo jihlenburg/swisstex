@@ -103,6 +103,7 @@ Ausgleich mitten auf der Seite genauso wie am Seitenanfang, wo
 \code{sansname}     & TeX Gyre Heros & Familienname für den Formelsatz \\
 \code{sansnameitalic} & TeX Gyre Heros Italic & kursiver Schnitt im Formelsatz \\
 \code{mathfont}     & TeX Gyre DejaVu Math & Mathematikschrift \\
+\code{codeface}     & DejaVu Sans Mono & Code-Begleiterschrift für \code{verbatim}/\code{\textbackslash verb} (I4, Abschnitt~\ref{sec:identitaet}) \\
 \code{annotationleading} & leer & Durchschuss Kolumnentitel/Kennzeichnung; leer = 2/3 Rastermass \\
 \code{glossleading}      & leer & Durchschuss Glossen und Legenden; leer = 3/4 Rastermass \\
 \code{footnoteleading}   & leer & Durchschuss Fussnoten und Tabellenkörper; leer = 3/4 Rastermass \\
@@ -181,8 +182,10 @@ verwenden.
   anmelden (Abschnitt~\ref{sec:sprachen}) \\
 \addlinespace[3.5pt]
 \code{\textbackslash swisscode\{...\}} & Schmalschrift 8,5\,pt auf
-  Rastermass, für Code und Bezeichner; \code{\textbackslash code} ist ein
-  Alias dafür \\
+  Rastermass, für Bezeichner MITTEN im Fliesstext (inline, typografisch);
+  \code{\textbackslash code} ist ein Alias dafür -- Codeblöcke
+  (\code{verbatim}, \code{\textbackslash verb}) laufen stattdessen
+  funktional auf \code{\textbackslash swisscodeface} (Abschnitt~\ref{sec:identitaet}) \\
 \addlinespace[3.5pt]
 \code{lead} & Vorspann, ein Grad grösser als der Grundtext \\
 \addlinespace[3.5pt]
@@ -360,6 +363,21 @@ nachträglich, am fertigen Dokument: swisscheck A16
 (Abschnitt~\ref{sec:pruefung}) vergleicht jede eingebettete Schrift gegen
 die im Kennzahlen-Sidecar deklarierten Familien. Die Referenzidentität
 \code{acme} erfüllt die Pflicht vollständig und wird genau darauf geprüft.
+
+\marg{Zwei Begleiter, zwei Pflichten}
+Nutzerentscheid vom 31.\,7.\,2026: I4 heisst seither nicht mehr nur ``eine
+Schriftfamilie'', sondern ``eine Familie plus deklarierte Mathe- und
+Code-Begleiter''. \code{\textbackslash swisscodeface} -- der zweite
+Begleiter neben der Mathe-Schrift, Vorgabe \code{codeface} = DejaVu Sans
+Mono -- treibt \code{verbatim} und \code{\textbackslash verb}. Anders als
+bei \code{\textbackslash condensed} und der Mathematik ist das Ersetzen
+hier keine Pflicht: Die Vorgabe ist selbst schon ein deklarierter, von A16
+geprüfter Begleiter, kein I4-Verstoss, wenn eine Identität ihn unangetastet
+lässt. Will eine Identität einen eigenen Code-Begleiter, gilt dieselbe
+Mechanik wie bei \code{\textbackslash condensed}:
+\code{\textbackslash renewfontfamily\textbackslash swisscodeface\{...\}}
+in \code{\textbackslash swissidentityfonts}, nie
+\code{\textbackslash newfontfamily} (die Familie ist bereits deklariert).
 
 \subsubsection{Beispiel: die Referenzidentität acme}
 
@@ -576,7 +594,10 @@ abgesetzten Formelumgebungen von \code{amsmath} setzt die Klasse deshalb
 Der Fang muss nach dem Schlusscode der Umgebung greifen, sonst rechnet er noch
 vor deren eigenem Abstand. Der Fang liest \code{\textbackslash pagetotal},
 füllt auf die nächste Rasterzeile auf und setzt die Tiefe für den folgenden
-Zeilenausgleich.
+Zeilenausgleich. Rasterfang und Schriftwahl sind zwei getrennte Mechanismen:
+\code{verbatim} bekommt seinen Fang über diese Registrierung, seine Schrift
+aber über \code{\textbackslash swisscodeface} (Abschnitt~\ref{sec:identitaet}),
+unabhängig davon, welcher der beiden Wege gerade greift.
 
 Damit brauchen abgesetzte Formeln kein \code{gridblock} mehr. Für eigene
 oder fremde Umgebungen, die noch nicht erfasst sind, genügt ein Aufruf von
@@ -748,6 +769,32 @@ Mass. Nach aussen bleibt der Block rastertreu. Gleitobjekte sind
 nicht vorgesehen, weil sie mit einem Basislinienraster und der Marginalspalte
 schlecht zusammengehen: Abbildungen stehen dort, wo sie geschrieben sind. Der
 Fussnotenbereich steht am Seitenfuss und folgt einem eigenen Mass.
+
+\marg{Zwei funktionale Ausnahmen, keine zweite Hausschrift}
+I4 verlangt eine Schriftfamilie, keine Enthaltsamkeit gegenüber jeder
+zweiten Schrift -- die Klasse kannte von Anfang an eine begründete
+Ausnahme: die Mathe-Schrift, weil kein Grotesk-Schnitt vollständige
+Formelzeichen mitbringt. Seit Version 2.0 gilt dieselbe Begründung für eine
+zweite, den Code-Begleiter \code{\textbackslash swisscodeface}: Verbatim-
+und \code{\textbackslash verb}-Satz brauchen Spaltentreue -- jedes Zeichen
+gleich breit --, damit Einrückung und Tabellenlage aus dem Quelltext
+erhalten bleiben, eine Eigenschaft, die keine proportionale Grotesk liefert.
+Beide Ausnahmen sind DEKLARIERT statt bloss geduldet: Die Kennzahlen-Sidecar
+trägt sie (\code{mathfont}, \code{codeface}), und swisscheck A16 lässt genau
+diese zusätzlichen Familien im Schriftinventar zu, keine dritte. Die
+Vorgabe für \code{codeface} ist DejaVu Sans Mono -- frei, aus demselben
+Projekt wie die Mathe-Vorgabe, grotesk im Skelett.
+
+Wichtig ist die Unterscheidung zwischen den beiden Aufrufen, die auf den
+ersten Blick beide ``Code'' meinen: \code{\textbackslash swisscode\{...\}}
+bleibt, was es seit Version 1 war -- Schmalschrift (\code{\textbackslash
+condensed}) für Bezeichner MITTEN im Fliesstext, typografisch gedacht, Teil
+der einen Hausfamilie. \code{verbatim} und \code{\textbackslash verb}
+dagegen laufen jetzt auf dem Code-Begleiter -- funktional gedacht, für
+Abschnitte wortwörtlichen Materials, nicht für ein einzelnes Wort im Satz.
+Ein Blick in den Kennzahlen-Sidecar zeigt beide Rollen nebeneinander:
+\code{condensedfamily} für das inline-\code{\textbackslash swisscode}, ein
+eigener \code{codeface}-Schlüssel für den Block.
 
 \colophon{SwissTeX 2.0.0, gesetzt mit sich selbst. TeX Gyre Heros als
 Univers-Analogon, 9,5/13,5\,pt im Flattersatz. Satzspiegel 105\,mm,

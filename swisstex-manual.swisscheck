@@ -19,6 +19,7 @@ ink=26,26,26
 mainfamily=texgyreheros
 condensedfamily=texgyreheroscn
 mathfont="TeXGyreDejaVuMath-Regular/OT:script=math;language=dflt;" at 9.5pt
+codeface=DejaVuSansMono
 logofonts=
 classification=none
 docid=

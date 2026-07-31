@@ -58,6 +58,12 @@
 \DeclareStringOption[TeX Gyre Heros]{sansname}    % Familienname fuer Mathe
 \DeclareStringOption[TeX Gyre Heros Italic]{sansnameitalic}
 \DeclareStringOption[TeX Gyre DejaVu Math]{mathfont}
+% Code-Begleiterschrift (I4, Nutzerentscheid 2026-07-31): siehe den
+% ausfuehrlichen Kommentar bei \swisscodeface in Abschnitt 3. DejaVu Sans
+% Mono ist frei, stammt aus demselben Projekt wie die Mathe-Schrift und
+% traegt ein grotesk-verwandtes Skelett -- passender Vorgabewert fuer den
+% zweiten deklarierten Begleiter neben der Mathe-Schrift.
+\DeclareStringOption[DejaVu Sans Mono]{codeface}
 \DeclareStringOption[]{annotationleading} % leer = 2/3 Rastermass
 \DeclareStringOption[]{glossleading}      % leer = 3/4 Rastermass
 \DeclareStringOption[]{footnoteleading}   % leer = 3/4 Rastermass
@@ -537,6 +543,39 @@
   Extension = .otf, UprightFont = *-regular, ItalicFont = *-italic,
   BoldFont = *-bold, BoldItalicFont = *-bolditalic, Ligatures = TeX]
 
+% \swisscodeface -- der ZWEITE deklarierte Anbieter-Begleiter neben der
+% Mathe-Schrift. Nutzerentscheid vom 2026-07-31: I4 ("eine Schriftfamilie")
+% liest sich seither als "eine Familie plus deklarierte Mathe- und
+% Code-Begleiter" -- Monospace-Ausrichtung ist fuer Code so funktional wie
+% Formelzeichen es fuer Mathe sind (Spaltentreue von Bezeichnern,
+% Einrueckung, Tabellendarstellung; keine dieser Eigenschaften laesst sich
+% in einer proportionalen Grotesk ausdruecken), keine zweite freihaendige
+% Schriftfamilie im Sinn von I4.
+%
+% Geladen wie die Mathe-Schrift PER FAMILIENNAME (\swiss@codeface), nicht
+% wie \swiss@sans/\swiss@sanscondensed per Dateiname ueber kpathsea --
+% DejaVu Sans Mono ist eine Systemschrift, macOS loest sie wie jeden
+% Familiennamen ueber CoreText auf (siehe CLAUDE.md-Eintrag zur
+% Mathe-Schrift; dieselbe Eigenheit gilt hier: die vier Schnitte muessen
+% zusaetzlich unter ~/Library/Fonts liegen). Vorgabe dieselbe Werkstatt wie
+% die Mathe-Schrift (DejaVu-Projekt), grotesk im Skelett -- passt zur
+% Anbieter-Grotesk der Klasse, ohne mit ihr verwechselt zu werden.
+% Scale=MatchLowercase gleicht die x-Hoehe an den Grundtext an: eine
+% Monospace-Schrift ohne diesen Abgleich laeuft im Grauwert leicht zu
+% schwer oder zu leicht neben der umgebenden Grotesk.
+%
+% Deklaration HIER, unmittelbar wie \condensed oben (nicht ueber die
+% Anbieter-Weiche unten) -- aus demselben Grund: \newfontfamily bei der
+% Vorgabeschrift bestueckt, damit ein Identitaetsanbieter, der einen
+% eigenen Code-Begleiter will, \renewfontfamily\swisscodeface{...} in
+% seinem \swissidentityfonts aufrufen KANN (dieselbe Vollstaendigkeits-
+% Mechanik wie bei \condensed, siehe Kommentar unten) -- anders als bei
+% \condensed ist das Ueberschreiben aber nicht zwingend: die Vorgabe ist
+% selbst schon ein deklarierter, von A16 geprueften Begleiter (wie die
+% Mathe-Vorgabe), kein I4-Verstoss, wenn eine Identitaet sie unangetastet
+% laesst.
+\newfontfamily\swisscodeface{\swiss@codeface}[Scale=MatchLowercase]
+
 % Anbieter-Weiche (I4): die Vorgabe ist die Grundschrift der Klasse
 % (v1.3-Heros-Block, unveraendert); eine Identitaetsdatei kann sie im
 % Ganzen ersetzen, indem sie \swissidentityfonts VOR diesem Punkt
@@ -555,7 +594,12 @@
 % Identitaet baut anstandslos, ohne Fehler oder Warnung. Ersetzt die
 % Identitaet auch die Mathematik, gilt dieselbe Pflicht fuer einen eigenen
 % \setmathfont-Aufruf, sonst bleibt die Vorgabe-Mathematik
-% (\swiss@mathfont) aktiv. Die durchgehende Pruefung dieser Vollstaendigkeit
+% (\swiss@mathfont) aktiv. Ersetzt sie auch den Code-Begleiter, gilt
+% dieselbe Renew-statt-New-Mechanik fuer \swisscodeface -- anders als bei
+% \condensed/\setmathfont ist das aber eine ERLAUBNIS, keine Pflicht: die
+% Vorgabe (DejaVu Sans Mono) bleibt ein vollwertiger, deklarierter
+% Begleiter, wenn eine Identitaet sie nicht anfasst (siehe Kommentar bei
+% \swisscodeface oben). Die durchgehende Pruefung dieser Vollstaendigkeit
 % ist nicht Teil dieses Tasks -- sie kommt mit dem acme-Identitaetstest
 % (Task 8) und swisscheck A16 (Task 9).
 % range=\mathup/range=\mathit OHNE Teilmengenangabe uebernehmen unicode-maths
@@ -751,6 +795,32 @@
 % bereits geladen, da \swisscode selbst erst beim Aufruf im Dokument
 % expandiert, also nach \AtBeginDocument).
 \newcommand{\swisscode}[1]{{\condensed\fontsize{8.5}{\gridunit}\selectfont #1}}
+
+% Vorformatierter/wortwoertlicher Satz (verbatim-Umgebung UND \verb, beide
+% haengen an \verbatim@font, siehe latex.ltx) laeuft auf dem ZWEITEN
+% deklarierten Begleiter \swisscodeface statt auf \condensed -- derselbe
+% Grad und Durchschuss wie \swisscode (8,5\,pt auf \gridunit), aber
+% funktionale Spaltentreue statt Schmalschrift-Typografie. Die Unterscheidung
+% ist bewusst, nicht nur ein Zufall der Umsetzung: \swisscode setzt
+% BEZEICHNER MITTEN IM FLIESSTEXT, wo Farbe und Anschluss an die Grotesk
+% zaehlen (inline, typografisch); verbatim/\verb setzen ABSCHNITTE
+% wortwoertlichen Materials (Konfigurationsauszuege, Codebloecke), wo
+% Zeichenbreite exakt und gleich sein muss, damit Einrueckung und
+% Spaltenlage im Quelltext erhalten bleiben (Block, funktional) -- derselbe
+% Unterschied wie zwischen Formelbuchstaben (\swiss@sansname, Grotesk) und
+% Formelsymbolen (\swiss@mathfont, eigene Mathe-Schrift) in Abschnitt 3.
+% \verbatim@font selbst ist ein LaTeX-Kern-Hook OHNE Argument
+% (\def\verbatim@font{\normalfont\ttfamily} in latex.ltx); ein \def hier
+% genuegt, \renewcommand waere nicht falsch, aber unueblich fuer einen
+% Kern-Hook dieser Form. \gridsnapenv{verbatim} (Abschnitt 5c, per
+% \AtBeginDocument registriert) bleibt davon unberuehrt: der Rasterfang
+% haengt an \AfterEndEnvironment{verbatim}, einem reinen Umgebungs-Hook,
+% nicht an der Schriftwahl innerhalb der Umgebung -- \gridsnap misst
+% \pagetotal nach \par, unabhaengig davon, welche Schrift den Inhalt
+% gesetzt hat (siehe tests/fixtures/stress.tex, das genau diesen Fall
+% uebt: verbatim-Block mitten im Dokument, Rasterfang UND Schriftfamilie
+% muessen beide stimmen).
+\def\verbatim@font{\swisscodeface\fontsize{8.5}{\gridunit}\selectfont}
 
 
 % ---------------------------------------------------------------------
@@ -1777,7 +1847,7 @@
 % bisherigen Vorgaben zurueck -- siehe dort; diese Klasse selbst schreibt
 % die Sidecar-Datei immer, ausnahmslos.
 %
-% -- Familiennamen (mainfamily/condensedfamily) --------------------------
+% -- Familiennamen (mainfamily/condensedfamily/codeface) ------------------
 % \f@family (NFSS-Kern) nach \normalfont bzw. \condensed, in je einer
 % LOKALEN Gruppe erfasst -- der Anbieter (Vorgabe oder Identitaet) bleibt
 % dabei gleichgueltig: der Vorgabepfad liefert, was \swiss@defaultfonts
@@ -1793,7 +1863,10 @@
 % Heuhaufen muss ERST ueber \edef+\noexpand vorab expandiert werden, ein
 % roher Verweis auf ein Makro faende darin nie einen Treffer) -- fehlt das
 % "(" wider Erwarten, bleibt der volle \f@family-Wert stehen, statt einen
-% rohen "Runaway argument"-Fehler zu riskieren.
+% rohen "Runaway argument"-Fehler zu riskieren. \swisscodeface (der zweite
+% deklarierte Begleiter, Abschnitt 3) ist genau wie \condensed ein
+% fontspec-\newfontfamily/\renewfontfamily-Ziel, also derselbe
+% \f@family-Weg, dieselbe Instanzklammer, dasselbe Stripping -- kein Sonderfall.
 %
 % -- Mathe-Schrift ---------------------------------------------------------
 % \fontname\textfont\symoperators (TeX-Primitiv) liefert den tatsaechlich
@@ -1824,6 +1897,12 @@
   \endgroup
   \edef\swiss@sc@sbtmp{\noexpand\in@{(}{\swiss@sc@cond}}\swiss@sc@sbtmp
   \ifin@\xdef\swiss@sc@cond{\expandafter\swiss@sc@stripinst\swiss@sc@cond\@nil}\fi
+  \begingroup
+    \swisscodeface
+    \xdef\swiss@sc@code{\f@family}%
+  \endgroup
+  \edef\swiss@sc@sbtmp{\noexpand\in@{(}{\swiss@sc@code}}\swiss@sc@sbtmp
+  \ifin@\xdef\swiss@sc@code{\expandafter\swiss@sc@stripinst\swiss@sc@code\@nil}\fi
   \xdef\swiss@sc@math{\fontname\textfont\symoperators}%
   \xdef\swiss@sc@class{\swiss@meta{classification}}%
   \ifx\swiss@sc@class\@empty\xdef\swiss@sc@class{none}\fi
@@ -1853,10 +1932,16 @@
   \immediate\write\swiss@sc@file{mainfamily=\swiss@sc@main}%
   \immediate\write\swiss@sc@file{condensedfamily=\swiss@sc@cond}%
   \immediate\write\swiss@sc@file{mathfont=\swiss@sc@math}%
+  % Zweiter deklarierter Begleiter (siehe \swisscodeface, Abschnitt 3):
+  % treibt verbatim/\verb (\verbatim@font, Abschnitt 5b), Vorgabe DejaVu
+  % Sans Mono. A16 nimmt diese Familie zusaetzlich zu mainfamily/
+  % condensedfamily/mathfont in die erlaubte Menge auf -- derselbe
+  % Mechanismus, der zuvor nur die Mathe-Schrift kannte.
+  \immediate\write\swiss@sc@file{codeface=\swiss@sc@code}%
   % Fremde Schriften, die eine eingebundene Logodatei mitbringt -- von der
   % Identitaet ueber \swisslogofiles{logofonts=...} ERKLAERT, nicht
   % gemessen. A16 nimmt sie zusaetzlich zu mainfamily/condensedfamily/
-  % mathfont in die erlaubte Menge auf; leer heisst "keine".
+  % mathfont/codeface in die erlaubte Menge auf; leer heisst "keine".
   \immediate\write\swiss@sc@file{logofonts=\swiss@logo@fonts}%
   \immediate\write\swiss@sc@file{classification=\swiss@sc@class}%
   \immediate\write\swiss@sc@file{docid=\swiss@meta{docid}}%

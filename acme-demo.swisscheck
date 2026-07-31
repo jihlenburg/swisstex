@@ -19,6 +19,7 @@ ink=26,26,26
 mainfamily=SwissTeXGrotesk
 condensedfamily=SwissTeXGroteskCondensed
 mathfont="TeXGyreDejaVuMath-Regular/OT:script=math;language=dflt;" at 9.5pt
+codeface=DejaVuSansMono
 logofonts=
 classification=internal
 docid=TR-2026-014

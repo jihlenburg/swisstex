@@ -117,6 +117,10 @@ class Raster:
     mainfamily: str | None = None
     condensedfamily: str | None = None
     mathfont: str | None = None
+    # Zweiter deklarierter Begleiter neben der Mathe-Schrift (Nutzerentscheid
+    # 2026-07-31, I4 "eine Familie plus deklarierte Mathe- und
+    # Code-Begleiter"): treibt verbatim/\verb, Vorgabe DejaVu Sans Mono.
+    codeface: str | None = None
     # Von der Identität ERKLÄRTE Fremdschriften aus eingebundenen Logodateien
     # (\swisslogofiles{logofonts=...}); A16 lässt genau diese zusätzlich zu.
     logofonts: tuple[str, ...] = ()
@@ -219,7 +223,7 @@ class Raster:
             kw["paper_rgb"] = _parse_rgb(d["paper"])
         if "ink" in d:
             kw["ink_rgb"] = _parse_rgb(d["ink"])
-        for schluessel in ("mainfamily", "condensedfamily", "mathfont",
+        for schluessel in ("mainfamily", "condensedfamily", "mathfont", "codeface",
                            "classification", "docid"):
             if schluessel in d:
                 kw[schluessel] = d[schluessel]
@@ -1098,7 +1102,9 @@ def _schriftbasis(s: str) -> str:
 
 def pruefe_schriftinventar(pdf, r: Raster) -> Befund:
     """A16: Jede eingebettete Schrift muss zu einer deklarierten Familie
-    passen -- mainfamily, condensedfamily, der Mathe-Schrift oder einer über
+    passen -- mainfamily, condensedfamily, der Mathe-Schrift, dem
+    Code-Begleiter (codeface, treibt verbatim/\\verb seit dem
+    Nutzerentscheid vom 2026-07-31 zu I4) oder einer über
     \\swisslogofiles{logofonts=...} ausdrücklich erklärten Logo-Schrift.
     v2.0-Dokumente müssen sauber sein -- keine Legacy-Erlaubnis für TeX
     Gyre/Latin Modern, auch nicht für ältere \\swisscode-freie Dokumente.
@@ -1125,7 +1131,7 @@ def pruefe_schriftinventar(pdf, r: Raster) -> Befund:
     b = Befund("A16", "Schriftinventar")
     if not r.has_sidecar:
         return _ohne_sidecar(b)
-    erlaubt = [x for x in (r.mainfamily, r.condensedfamily, r.mathfont)
+    erlaubt = [x for x in (r.mainfamily, r.condensedfamily, r.mathfont, r.codeface)
                + tuple(r.logofonts) if x and x != "nullfont"]
     erlaubt_basen = {_schriftbasis(x) for x in erlaubt}
     erlaubt_norm = [_normalisiere_schriftname(x) for x in erlaubt]

@@ -1,4 +1,4 @@
-from conftest import build_doc, ROOT
+from conftest import build_doc, swisscheck, ROOT
 import pdfplumber
 
 def _fonts(pdf):
@@ -19,6 +19,83 @@ def test_swisscode_no_latin_modern(tmp_path):
     r = build_doc(fx, tmp_path)
     assert r.returncode == 0, r.log[-2000:]
     assert not any("LMMono" in x or "LMRoman" in x for x in _fonts(r.pdf))
+
+def test_codeface_default_dejavu_sans_mono_swisscode_stays_condensed(tmp_path):
+    # User ruling 2026-07-31: code blocks get a DECLARED code face (I4 reads
+    # "one family plus declared math and code companions", mirroring the
+    # existing math-font companion). \verbatim@font (which also drives
+    # \verb, see latex.ltx) is restyled onto \swisscodeface -- a SECOND
+    # declared companion, family-name-loaded like the math font, default
+    # "DejaVu Sans Mono" (free, DejaVu project, same family as the math
+    # font). \swisscode itself is UNCHANGED: inline code stays on
+    # \condensed (typographic, part of the one-family grotesque), only
+    # block code (verbatim/\verb) is functional monospace.
+    # Markers use disjoint letters (no shared letters between the three
+    # groups, and none of them collide with any other glyph the class itself
+    # emits on this otherwise-empty page, e.g. the pagina digit) so filtering
+    # pdfplumber's flat per-glyph char list by exact character membership
+    # cannot cross-contaminate one group's font set with another's.
+    fx = tmp_path / "codeface.tex"
+    fx.write_text(r"""\documentclass{swisstex}
+\begin{document}
+\swisscode{QZQ}
+
+\begin{verbatim}
+XKX
+\end{verbatim}
+
+\verb|WJW|
+\end{document}""")
+    r = build_doc(fx, tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    with pdfplumber.open(r.pdf) as p:
+        chars = [(c["text"], c["fontname"]) for pg in p.pages for c in pg.chars]
+    swisscode_fonts = {fn for ch, fn in chars if ch in "QZ"}
+    verbatim_fonts = {fn for ch, fn in chars if ch in "XK"}
+    verb_fonts = {fn for ch, fn in chars if ch in "WJ"}
+    assert swisscode_fonts, chars
+    assert verbatim_fonts, chars
+    assert verb_fonts, chars
+    assert all("HerosCondensed" in f or "HerosCn" in f for f in swisscode_fonts), swisscode_fonts
+    assert not any("DejaVuSansMono" in f for f in swisscode_fonts), swisscode_fonts
+    assert all("DejaVuSansMono" in f for f in verbatim_fonts), verbatim_fonts
+    assert all("DejaVuSansMono" in f for f in verb_fonts), verb_fonts
+    # A16 (Schriftinventar) must now pass: the sidecar declares codeface=...
+    # and the class allows exactly that family for the verbatim/\verb glyphs.
+    assert r.sidecar.get("codeface"), r.sidecar
+    assert "DejaVuSansMono" in r.sidecar["codeface"].replace(" ", ""), r.sidecar
+    code, out = swisscheck(r.pdf)
+    assert code == 0, out
+    a16 = next(z for z in out.splitlines() if z.strip().startswith("A16"))
+    assert "ok" in a16, out
+
+
+def test_codeface_option_override(tmp_path):
+    # The Kennzahl option itself: an identity or document that sets
+    # codeface= replaces \swisscodeface's default (same override channel a
+    # future identity would use via \renewfontfamily\swisscodeface{...} in
+    # \swissidentityfonts, see the I4-completeness comment in swisstex.cls
+    # Sec. 3). TeX Gyre Heros is already installed/resolvable in this repo
+    # (the class's own default sans), so it doubles as a convenient
+    # non-default probe family here without any extra font install.
+    fx = tmp_path / "codefaceopt.tex"
+    fx.write_text(r"""\documentclass[codeface={TeX Gyre Heros}]{swisstex}
+\begin{document}
+\begin{verbatim}
+XKX
+\end{verbatim}
+\end{document}""")
+    r = build_doc(fx, tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    with pdfplumber.open(r.pdf) as p:
+        chars = [(c["text"], c["fontname"]) for pg in p.pages for c in pg.chars]
+    verbatim_fonts = {fn for ch, fn in chars if ch in "XK"}
+    assert verbatim_fonts, chars
+    assert all("TeXGyreHeros" in f for f in verbatim_fonts), verbatim_fonts
+    assert not any("DejaVuSansMono" in f for f in verbatim_fonts), verbatim_fonts
+    assert "codeface" in r.sidecar
+    assert "TeXGyreHeros" in r.sidecar["codeface"].replace(" ", ""), r.sidecar
+
 
 def test_math_partial_glyph(tmp_path):
     # Regression test: U+1D715 (MATHEMATICAL ITALIC PARTIAL DIFFERENTIAL,
