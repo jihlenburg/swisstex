@@ -72,6 +72,32 @@ def test_acme_fonts_are_grotesk_only(tmp_path):
     assert all(f.startswith(allowed_prefixes) for f in fonts), fonts
 
 
+def test_acme_math_partial_glyph(tmp_path):
+    # Mirrors tests/test_fonts.py::test_math_partial_glyph for the acme
+    # identity's OWN \setmathfont triad (swissidentity-acme.sty), which
+    # unlike the class's default provider selects the italic shape by full
+    # name ("SwissTeX Grotesk Italic") rather than a second family name --
+    # a genuinely different code path that could regress independently of
+    # the class fix. Same bug shape: an unrestricted range=\mathit would
+    # claim U+1D715 (\partial) for SwissTeX Grotesk Italic, which has no
+    # math glyph there.
+    fx = tmp_path / "acmemathpartial.tex"
+    fx.write_text(r"""\documentclass[identity=acme]{swisstex}
+\begin{document}
+\tracinglostchars=2
+$\partial f = ax^2 + \beta y$
+\end{document}""")
+    r = build_doc(fx, tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    assert "Missing character" not in r.log, r.log[-2000:]
+    with pdfplumber.open(r.pdf) as p:
+        chars = {c["text"]: c["fontname"] for pg in p.pages for c in pg.chars}
+    assert "\U0001d715" in chars, chars
+    assert "SwissTeXGrotesk" not in chars["\U0001d715"], chars
+    for letter in ("f", "a", "x", "y"):
+        assert "SwissTeXGrotesk" in chars[letter], (letter, chars)
+
+
 def test_acme_docid_in_foot_region(tmp_path):
     # swissidentity-acme.sty's \swissfootformat is
     # "\meta{docid} . \meta{version} . \meta{date}"; acme-demo.tex sets

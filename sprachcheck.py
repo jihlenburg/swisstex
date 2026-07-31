@@ -6,13 +6,13 @@ Herkunft: SwissTeX 1.3.1 (Produktionsfork), unverändert übernommen. S6
 A17 misst am gesetzten PDF, ob ein Glossenblock über sechs Zeilen läuft,
 S6 misst dieselbe Anforderung an der Quelle, in Wörtern statt Zeilen.
 
-Sechs Prüfungen S1 bis S6, analog zu den Typografieprüfungen A1 bis A8 in
+Neun Prüfungen S1 bis S9, analog zu den Typografieprüfungen A1 bis A8 in
 swisscheck. Gemessen wird der Fliesstext; Tabellen, Formeln, Marginalien und
 Codeblöcke sind ausgenommen (Marginalien werden separat mit S6 geprüft).
 
 Die Schwellen sind auf technische Fachprosa ausgelegt, nicht auf leichte
-Sprache: Ein LIX um 55 ist für Fachliteratur normal und kein Mangel. Hart ist
-nur S1; alles andere warnt.
+Sprache: Ein LIX um 55 ist für Fachliteratur normal und kein Mangel. Hart
+sind S1, S7 und S8; alles andere warnt.
 
     S1  Kein Satz über 40 Wörter                          (hart)
     S2  Höchstens 8 % der Sätze über 30 Wörter            (weich)

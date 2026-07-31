@@ -19,16 +19,30 @@
 % \setmainfont für den Grundtext, \renewfontfamily (NICHT \newfontfamily --
 % \condensed ist bereits deklariert, siehe der Kommentar an der
 % Anbieter-Weiche in swisstex.cls Abschnitt 3) für die Schmalschrift, und
-% ein eigener \setmathfont, damit auch die Mathematik auf derselben
-% Familie steht statt stillschweigend bei der Vorgabe-Mathematik zu bleiben.
-% Diese Vollständigkeit ist die Pflicht des Anbieters, die die Klasse selbst
-% nicht erzwingt -- genau das prüft acme-demo.tex/tests/test_acme.py
-% end-to-end (nur SwissTeXGrotesk*/Cond*-Namen, kein TeX Gyre Heros, im
-% fertigen PDF).
+% denselben Dreiklang wie \swiss@defaultfonts in swisstex.cls Abschnitt 3
+% für die Mathematik: ein Hauptmathefont plus zwei bereichseingeschränkte
+% \setmathfont-Aufrufe, damit Buchstaben und Ziffern auch im Formelsatz auf
+% derselben Familie stehen, statt stillschweigend bei der Vorgabe-Mathematik
+% zu bleiben. Die Einschränkung auf {latin,Latin,greek,Greek[,num]} (statt
+% des unicode-math-Vorgabebereichs, der die "misc"-Teilmenge mitnimmt) ist
+% keine Kosmetik: ohne sie beansprucht SwissTeX Grotesk auch Symbolstellen
+% wie \partial (U+1D715) und liefert dafür kein Glyph (siehe der
+% ausführliche Kommentar bei \swiss@defaultfonts) -- derselbe Fehler wie in
+% der Klasse, nur mit der Identitätsschrift statt Heros. "SwissTeX Grotesk
+% Italic" ist der von fontspec aufgelöste volle Name der kursiven
+% Auspraegung derselben Familie (eine Datei, ein Family-Eintrag mit
+% mehreren Schnitten -- anders als TeX Gyre Heros/Heros Italic, die zwei
+% getrennte Familiennamen sind); "SwissTeX Grotesk" ohne Zusatz waehlt darin
+% den regulaeren Schnitt. Diese Vollständigkeit ist die Pflicht des
+% Anbieters, die die Klasse selbst nicht erzwingt -- genau das prüft
+% acme-demo.tex/tests/test_acme.py end-to-end (nur SwissTeXGrotesk*/Cond*-
+% Namen, kein TeX Gyre Heros, im fertigen PDF).
 \newcommand{\swissidentityfonts}{%
   \setmainfont{SwissTeX Grotesk}%
   \renewfontfamily\condensed{SwissTeX Grotesk Condensed}%
-  \setmathfont{TeX Gyre DejaVu Math}}
+  \setmathfont{TeX Gyre DejaVu Math}%
+  \setmathfont[range=\mathup/{latin,Latin,greek,Greek,num}]{SwissTeX Grotesk}%
+  \setmathfont[range=\mathit/{latin,Latin,greek,Greek}]{SwissTeX Grotesk Italic}}
 
 \swisslogofiles{cover=acme-logo.pdf, colophon=acme-logo.pdf}
 

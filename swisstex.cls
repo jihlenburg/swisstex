@@ -558,13 +558,40 @@
 % (\swiss@mathfont) aktiv. Die durchgehende Pruefung dieser Vollstaendigkeit
 % ist nicht Teil dieses Tasks -- sie kommt mit dem acme-Identitaetstest
 % (Task 8) und swisscheck A16 (Task 9).
+% range=\mathup/range=\mathit OHNE Teilmengenangabe uebernehmen unicode-maths
+% eigene Vorgabe-Teilmengen fuer dieses Alphabet -- fuer \mathup
+% {latin,Latin,greek,Greek,num,misc}, fuer \mathit
+% {latin,Latin,greek,Greek,misc} (unicode-math-xetex.sty,
+% \__um_default_mathalph:nnn-Tabelle). "misc" ist dabei keine Randgruppe:
+% es enthaelt exakt jene "Symbol"-Zeichen aus dem Unicode-Block der
+% mathematischen Alphanumerik, die neben den eigentlichen Buchstaben in
+% derselben Zeile mitlaufen -- \partial (U+1D715 in der Italic-Auspraegung),
+% \nabla und (nur bei \mathup) \dotlessi/\dotlessj. Ohne Einschraenkung
+% beansprucht die Anbieter-Schrift (hier Heros, in Serifenschriften ohne
+% Mathe-Gilde) also nicht nur die Buchstaben, sondern auch diese
+% Symbolstellen -- und liefert fuer sie kein Glyph: leerer Output ohne
+% Buildfehler (rc=0), im Log nur bei aktivem \tracinglostchars als
+% "Missing character" sichtbar. Empirisch verifiziert (siehe
+% tests/test_fonts.py::test_math_partial_glyph): $\partial$ fehlte in
+% jedem Formelsatz mit \mathit-Bereich. Die Teilmengenangabe nach "/"
+% (dieselbe Syntax, mit der unicode-math seine eigene Vorgabe definiert)
+% grenzt auf reine Buchstaben-/Ziffernklassen ein und laesst "misc" bei der
+% Vorgabe-Mathematik (\swiss@mathfont, TeX Gyre DejaVu Math -- volle
+% Unicode-Abdeckung dieses Blocks) -- Buchstaben und Ziffern in der
+% Grotesk, Symbole aus der Mathe-Schrift -- die Rollenteilung, die
+% \swiss@sansname/\swiss@sansnameitalic im Manual (Optionstabelle,
+% "Familienname/kursiver Schnitt fuer den Formelsatz") schon fuer Buchstaben
+% dokumentiert, jetzt auch tatsaechlich nur fuer Buchstaben (und Ziffern)
+% gilt. Eine Identitaet, die \setmathfont selbst aufruft, hat
+% dieselbe Pflicht (siehe Kommentar oben) -- swissidentity-acme.sty spiegelt
+% denselben Dreiklang mit derselben Einschraenkung.
 \newcommand{\swiss@defaultfonts}{%
   \setmainfont{\swiss@sans}[
     Extension = .otf, UprightFont = *-regular, ItalicFont = *-italic,
     BoldFont = *-bold, BoldItalicFont = *-bolditalic, Ligatures = TeX]%
   \setmathfont{\swiss@mathfont}%
-  \setmathfont[range=\mathup]{\swiss@sansname}%
-  \setmathfont[range=\mathit]{\swiss@sansnameitalic}}
+  \setmathfont[range=\mathup/{latin,Latin,greek,Greek,num}]{\swiss@sansname}%
+  \setmathfont[range=\mathit/{latin,Latin,greek,Greek}]{\swiss@sansnameitalic}}
 
 % Die Weiche selbst laeuft bei \AtBeginDocument statt sofort: fontspec
 % traegt \setmainfont an dieser Stelle zuverlaessig mit, und erst am
