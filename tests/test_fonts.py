@@ -126,3 +126,18 @@ $\partial f = ax^2 + \beta y$
     # (b) letters in the formula still carry the sans family (I4).
     for letter in ("f", "a", "x", "y"):
         assert "TeXGyreHeros" in chars[letter], (letter, chars)
+
+def test_swisscodeface_shape_variants(tmp_path):
+    # Assert that \swisscodeface resolves shape variants (bold, italic/oblique)
+    # correctly. The test uses character markers to isolate each shape's font.
+    fx = tmp_path / "codeface_variants.tex"
+    fx.write_text(r"""\documentclass{swisstex}
+\begin{document}
+{\swisscodeface abc {\bfseries bold} {\itshape obl}}
+\end{document}""")
+    r = build_doc(fx, tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    with pdfplumber.open(r.pdf) as p:
+        fonts = {c["fontname"].split("+")[-1] for pg in p.pages for c in pg.chars}
+    assert any("DejaVuSansMono-Bold" in f for f in fonts), fonts
+    assert any("DejaVuSansMono-Oblique" in f for f in fonts), fonts

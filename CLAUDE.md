@@ -83,7 +83,7 @@ in the output, never in the source. `showgrid=true` remains the quick visual che
 Prerequisites beyond a base TeX Live: `tex-gyre` (the TeX Gyre Heros text fonts, used as the Univers
 analogue), `tex-gyre-math` (supplies `texgyredejavu-math.otf`, family name `TeX Gyre DejaVu Math`),
 plus `titlesec`, `needspace`, `enumitem`. Install with
-`tlmgr install tex-gyre tex-gyre-math titlesec needspace enumitem` (append `--usermode` after
+`tlmgr install tex-gyre tex-gyre-math titlesec needspace enumitem marginfix dejavu` (append `--usermode` after
 `tlmgr init-usertree` if the system tree is not writable). The `dejavu-otf` package is *not* needed —
 it contains only legacy `.sty` support, not the math font.
 
