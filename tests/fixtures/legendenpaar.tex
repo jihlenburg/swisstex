@@ -1,0 +1,37 @@
+% Zwei Tabellen mit mehrzeiliger Legende auf DERSELBEN Seite: jeder
+% Legendenkopf ("Tabelle N") traegt sein festes "\\[1pt]" zum Legendentext,
+% die Seite enthaelt den Sollwert+1pt-Abstand also ZWEIMAL. Regressionsnetz
+% fuer A13: bis zum Fix galten die beiden gleichen Luecken als Cluster und
+% damit als Kennzahlenverstoss (gefunden an den tabellenreichen
+% Produktionsdokumenten des KIVAT-Forks, 2026-08-05).
+\documentclass{swisstex}
+\setrunningtitle{Fixture Legendenpaar}
+\begin{document}
+\section{Abschnitt}
+Grundtext auf dem Raster, damit die Seite regulaer beginnt und die
+Marginalspalte neben beiden Tabellen bestueckt wird.
+
+\begin{swisstable}{Erste Legende, lang genug fuer mehrere Zeilen in der Marginalspalte}
+\begin{tabularx}{\textcolumn}[t]{@{}S{30mm}@{\hspace{4mm}}L@{}}
+\toprule
+\tabhead{Merkmal} & \tabhead{Beschreibung} \\
+\midrule
+Erstes & Ein Wert im Tabellenkoerper \\
+Zweites & Noch ein Wert \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+
+Ein kurzer Absatz Grundtext zwischen den beiden Tabellen.
+
+\begin{swisstable}{Zweite Legende, ebenfalls ueber mehrere Marginalzeilen gebrochen}
+\begin{tabularx}{\textcolumn}[t]{@{}S{30mm}@{\hspace{4mm}}L@{}}
+\toprule
+\tabhead{Merkmal} & \tabhead{Beschreibung} \\
+\midrule
+Drittes & Ein weiterer Wert \\
+Viertes & Und ein letzter \\
+\bottomrule
+\end{tabularx}
+\end{swisstable}
+\end{document}

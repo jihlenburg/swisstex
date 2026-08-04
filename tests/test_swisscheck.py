@@ -229,6 +229,23 @@ def test_a13_end_to_end_with_mutated_sidecar(tmp_path):
     assert "Verhältnis" in out, out
 
 
+def test_a13_tolerates_caption_head_gap_repeated_per_page(tmp_path):
+    # \swisstable haengt zwischen Legendenkopf ("Tabelle N") und
+    # Legendentext ein festes "\\[1pt]" an. Mit EINER Legende je Seite
+    # deckte die Einzelbeleg-Regel den Sollwert+1pt-Abstand ab; ZWEI
+    # Tabellen auf derselben Seite erzeugten zwei gleiche Luecken, die
+    # faelschlich als Cluster galten (gefunden an den tabellenreichen
+    # Produktionsdokumenten des KIVAT-Forks, 2026-08-05).
+    r = build_doc(ROOT / "tests/fixtures/legendenpaar.tex", tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    code, out = swisscheck(r.pdf)
+    a13 = next(z for z in out.splitlines() if z.strip().startswith("A13"))
+    assert "ok" in a13, out
+    # Die mehrzeiligen Legendentexte selbst bleiben Pruefgut: ihre
+    # glossleading-Cluster duerfen nicht mit herausgefiltert werden.
+    assert "(0 geprüft)" not in a13, a13
+
+
 # --- B3: A15 misst wirklich ------------------------------------------------
 
 def test_a15_measures_the_printed_band(tmp_path):

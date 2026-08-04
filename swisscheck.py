@@ -929,13 +929,25 @@ def pruefe_kommensurabilitaet(pdf, r: Raster, tol=0.35) -> Befund:
        \\sidenote und den Legendenzeilen von \\swisstable/\\swissfigure
        bestueckt -- allesamt direkte \\fontsize{...}{...}-Aufrufe der
        Klasse selbst, ohne Fremdpaket-Zeilenabstand dazwischen.
-    2. Ein Cluster mit nur EINEM Beleg wird ignoriert, kein Verstoss.
-       Grund, ebenfalls empirisch gefunden: \\swisstable haengt zwischen
-       Legendenkopf ("Tabelle N") und Legendentext ein festes "\\\\[1pt]"
-       an -- ein einzelner, bewusst gesetzter Zusatzabstand, keine
-       Kennzahlen-Abweichung. Ein echter, durchgaengiger Verstoss wiederholt
-       sich dagegen ueber mehrere Zeilen und bildet ein Cluster mit
-       mindestens zwei Belegen.
+    2. Der Legendenkopf-Abstand von \\swisstable/\\swissfigure wird vor der
+       Clusterbildung ausgenommen: zwischen Legendenkopf ("Tabelle N") und
+       Legendentext haengt die Klasse ein festes "\\\\[1pt]" an, ein
+       Sollwert-plus-1pt-Abstand ist darum ein bewusstes Klassenkonstrukt
+       und keine Kennzahlen-Abweichung -- auch wenn er bei mehreren
+       Legenden auf derselben Seite mehrfach auftritt. Bis 2026-08-05
+       deckte allein die Einzelbeleg-Regel (Punkt 3) diesen Fall ab, was
+       ab ZWEI Legenden je Seite Falschbefunde gab (gefunden an den
+       tabellenreichen Dokumenten des KIVAT-Forks, Regressionsnetz:
+       tests/fixtures/legendenpaar.tex). Vorrangregel gegen
+       Abdeckungsverlust: Eine Luecke, die schon DIREKT einem Sollwert
+       entspricht, bleibt Pruefgut -- annotationleading+1pt (10.0) laege
+       sonst in der Toleranz von glossleading (10.125) und filterte echte
+       Glossenabstaende heraus.
+    3. Ein Cluster mit nur EINEM Beleg wird ignoriert, kein Verstoss: ein
+       einzelner, bewusst gesetzter Zusatzabstand ist keine
+       Kennzahlen-Abweichung. Ein echter, durchgaengiger Verstoss
+       wiederholt sich dagegen ueber mehrere Zeilen und bildet ein Cluster
+       mit mindestens zwei Belegen.
 
     Nicht mehr abgedeckt: Fussnoten im Satzspiegel selbst (dort mit
     Tabellenkoerpern ununterscheidbar, siehe Punkt 1) -- keines der
@@ -969,6 +981,16 @@ def pruefe_kommensurabilitaet(pdf, r: Raster, tol=0.35) -> Befund:
             continue
         luecken = [y1 - y0 for y0, y1 in zip(baselinien, baselinien[1:])
                    if y1 - y0 <= 2 * r.gridunit]
+        # Legendenkopf-Abstand (Docstring Punkt 2): NUR als Sollwert+1pt
+        # lesbare Luecken sind das "\\[1pt]" der Klasse hinter "Tabelle N"
+        # und zaehlen nicht als Durchschuss; was schon direkt einem
+        # Sollwert entspricht, bleibt Pruefgut (Vorrangregel).
+        def legendenkopf(g: float) -> bool:
+            passt_direkt = any(abs(g - soll) <= tol for soll in sollwerte)
+            passt_plus1 = any(abs(g - (soll + 1.0)) <= tol
+                              for soll in sollwerte)
+            return passt_plus1 and not passt_direkt
+        luecken = [g for g in luecken if not legendenkopf(g)]
         if not luecken:
             continue
         cluster: dict[float, list[float]] = {}
