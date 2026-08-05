@@ -329,6 +329,11 @@ eine Bauautomatik einhängen lässt.
 
 ## Lesbarkeitsprüfung: `sprachcheck.py`
 
+Seit 2026-08-05 prüft `--lang en` englische Quellen nach dem Profil
+Swiss Technical English (hart: 35-Wort-Satz, Semikola, Em-Dashes, dazu
+warnende Messungen für Patter, Passivanteil, schwache Auftakte und
+UK-Schreibformen). Vorgabe bleibt das deutsche Profil S1 bis S9.
+
 ```
 python3 sprachcheck.py dokument.tex -v
 ```

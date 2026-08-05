@@ -61,3 +61,67 @@ def test_swisstex_manual_is_not_vacuous():
     assert "Sprachprüfung:" in kopf, out
     saetze = int(kopf.split(":")[1].split("Sätze")[0].strip())
     assert saetze > 100, kopf
+
+
+# --- Englisches Profil: --lang en, Swiss Technical English -----------------
+# E1 (35 Woerter), E4 (Semikola), E5 (Em-Dashes) hart; E3 (Patter),
+# E9 (schwache Auftakte) u.a. warnen. Profil-Definition:
+# KIVAT-Repo, skill/swiss-technical-english/SKILL.md.
+
+DIRTY_EN = r"""\documentclass{swisstex}
+\begin{document}
+\section{Probe}
+
+There is a pipeline that leverages the framework in order to deliver the prediction of the drift of the athermalized system over the full temperature range of the automotive specification for every field angle of the modeled lens assembly. The mount compensates; the drift shrinks --- almost fully gone.
+
+The second paragraph carries enough plain words to count as prose for
+the extraction step of the checker and it stays deliberately short and
+calm so only the first paragraph violates the hard rules.
+\end{document}
+"""
+
+CLEAN_EN = r"""\documentclass{swisstex}
+\begin{document}
+\section{Probe}
+
+The pipeline predicts the drift of the athermalized system. The chain
+is built from open tools and covers the span from material scatter to
+image evaluation. Three mechanisms detune the compensation. The mount
+holds the sensor, and the barrel carries the lenses through the range.
+
+A second paragraph keeps the rhythm alive with a slightly longer
+sentence that still stays well under the limit, followed by a short
+one. The paragraph ends here with a calm closing statement.
+\end{document}
+"""
+
+
+def _run_lang(tex, lang):
+    r = subprocess.run([str(PY), str(ROOT / "sprachcheck.py"), str(tex),
+                        "--lang", lang],
+                       cwd=ROOT, capture_output=True, text=True, timeout=60)
+    return r.returncode, r.stdout + r.stderr
+
+
+def test_english_profile_flags_hard_violations(tmp_path):
+    tex = tmp_path / "dirty-en.tex"
+    tex.write_text(DIRTY_EN)
+    code, out = _run_lang(tex, "en")
+    assert code != 0, out
+    for kuerzel in ("E1", "E4", "E5"):
+        zeile = next(z for z in out.splitlines()
+                     if z.strip().startswith(kuerzel + " "))
+        assert "FEHLER" in zeile, out
+    # Patter (leverages, in order to) und schwacher Auftakt (There is)
+    # werden gefunden und warnen:
+    e3 = next(z for z in out.splitlines() if z.strip().startswith("E3 "))
+    e9 = next(z for z in out.splitlines() if z.strip().startswith("E9 "))
+    assert "warnt" in e3 and "warnt" in e9, out
+
+
+def test_english_profile_clean_passes(tmp_path):
+    tex = tmp_path / "clean-en.tex"
+    tex.write_text(CLEAN_EN)
+    code, out = _run_lang(tex, "en")
+    assert code == 0, out
+    assert "bestanden" in out.splitlines()[-1], out
