@@ -82,6 +82,13 @@ calm so only the first paragraph violates the hard rules.
 
 CLEAN_EN = r"""\documentclass{swisstex}
 \begin{document}
+% Sternform-Umschlag mit punktlosem foot: darf nicht als Fliesstext
+% zaehlen (Extraktor-Regression der ersten englischen Ausgabe).
+\swisscover*{kicker={Working Paper}, title={Probe},
+  subtitle={A subtitle without any sentence marks at all},
+  foot={AMX13 GmbH Luebs Germany with many plain words and no period
+   marks anywhere in this deliberately long footer line of the cover},
+  glyph={2}}
 \section{Probe}
 
 The pipeline predicts the drift of the athermalized system. The chain

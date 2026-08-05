@@ -78,6 +78,11 @@ def extrahiere(pfad):
     t = re.sub(r"\\(sub)?section\*?\{[^}]*\}", "", t)
     t = re.sub(r"\\colophon\{.*?\}", "", t, flags=re.S)
     t = re.sub(r"\\swisscover(\{.*?\}\s*){4}", "", t, flags=re.S)
+    # Sternform: keyval-Werte mit geschachtelten Klammern, der Aufruf endet
+    # an der Leerzeile -- sonst zaehlen kicker/title/foot als Fliesstext
+    # (aufgefallen an der ersten englischen Ausgabe, deren foot ohne
+    # Satzpunkte einen 41-Wort-Pseudosatz bildete).
+    t = re.sub(r"\\swisscover\*\{.*?\n\n", "", t, flags=re.S)
     t = re.sub(r"\$[^$]*\$", " FORMEL ", t)
     t = re.sub(r"\\[a-zA-Z]+\{([^{}]*)\}", r"\1", t)
     t = re.sub(r"\\[a-zA-Z]+", "", t)
