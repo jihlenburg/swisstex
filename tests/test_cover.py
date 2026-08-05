@@ -352,3 +352,31 @@ def test_cover_foot_accepts_meta_placeholder(tmp_path):
         text = (p.pages[0].extract_text() or "").replace(" ", "")
     assert "Q-42" in text, text
     assert "3.1" in text, text
+
+
+# --- glyphink: Farbrolle des Ueberformatzeichens (v2.1) ---------------------
+
+def test_glyph_default_ink_is_accent(tmp_path):
+    # Vorgabepfad unveraendert: ohne glyphink= traegt das Zeichen die
+    # Signalfarbe (Klassenvorgabe accent 255,55,37).
+    r = build_doc(ROOT / "tests/fixtures/glyph-cover.tex", tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    with pdfplumber.open(r.pdf) as p:
+        big = [c for c in p.pages[0].chars if c["size"] > 100]
+    assert big, "kein Ueberformatzeichen gefunden"
+    for c in big:
+        col = c["non_stroking_color"]
+        assert len(col) == 3 and abs(col[0] - 1.0) < 0.01 and col[1] < 0.5, col
+
+
+def test_glyphink_white_restores_tone_on_tone(tmp_path):
+    # glyphink=white stellt den Ton-in-Ton-Auftritt der 1.3-Linie wieder
+    # her: Zeichen weiss im Seitenhintergrund, der Titel laeuft darueber.
+    r = build_doc(ROOT / "tests/fixtures/glyphink-cover.tex", tmp_path)
+    assert r.returncode == 0, r.log[-2000:]
+    with pdfplumber.open(r.pdf) as p:
+        big = [c for c in p.pages[0].chars if c["size"] > 100]
+    assert big, "kein Ueberformatzeichen gefunden"
+    for c in big:
+        col = c["non_stroking_color"]
+        assert all(abs(v - 1.0) < 0.01 for v in col), col

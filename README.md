@@ -7,7 +7,7 @@ misst, und -- seit 2.0 -- eine Identitätsschicht, über die ein Dokument
 Farbe, Schrift, Logo und Klassifizierungsvokabular bezieht, ohne die Klasse
 selbst zu ändern.
 
-Version 2.0.0 · XeLaTeX · MIT (Klasse und Werkzeuge) + AFPL (Schrift, siehe
+Version 2.1.0 · XeLaTeX · MIT (Klasse und Werkzeuge) + AFPL (Schrift, siehe
 unten)
 
 ---
@@ -228,7 +228,7 @@ Erstes & Text \\
 ```
 
 Kräftige Ebene: `\swisscover*{kicker=..., title=..., subtitle=..., foot=...,
-client=..., docid=..., date=..., glyph=..., glyphline=..., glyphlines=...,
+client=..., docid=..., date=..., glyph=..., glyphink=..., glyphline=..., glyphlines=...,
 logo=..., band=<start>/<lines>, variant=...}` für eine randabfallende Umschlagseite,
 vollständig rastergebunden -- kein Seitenanteil mehr, weder für das
 Farbband noch für ein Überformatzeichen. Die alte Positionsform

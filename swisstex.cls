@@ -19,7 +19,7 @@
 %% ---------------------------------------------------------------------
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{swisstex}[2026/07/29 v2.0.0 Swiss typographic grid]
+\ProvidesClass{swisstex}[2026/08/05 v2.1.0 Swiss typographic grid]
 
 \RequirePackage{iftex}
 \RequireXeTeX
@@ -1473,6 +1473,11 @@
 \define@key{swisscv}{glyph}{\def\swiss@cg@glyph{#1}}
 \define@key{swisscv}{glyphline}{\def\swiss@cg@line{#1}}
 \define@key{swisscv}{glyphlines}{\def\swiss@cg@lines{#1}}
+% glyphink (v2.1): Farbrolle des Ueberformatzeichens. Vorgabe accent
+% (Ein-Rot-Pfad der v2.0); white stellt den Ton-in-Ton-Auftritt der
+% 1.3-Linie wieder her, deren Zeichen hartkodiert weiss im
+% Seitenhintergrund stand und den Titel darueberlaufen liess.
+\define@key{swisscv}{glyphink}{\def\swiss@cg@ink{#1}}
 \define@key{swisscv}{logo}{\def\swiss@cv@logo{#1}}
 \define@key{swisscv}{band}{%
   \edef\swiss@cv@bandval{\swiss@zapspace{#1}}%
@@ -1497,6 +1502,7 @@
 \define@key{swisscvscan}{glyph}{}
 \define@key{swisscvscan}{glyphline}{}
 \define@key{swisscvscan}{glyphlines}{}
+\define@key{swisscvscan}{glyphink}{}
 \define@key{swisscvscan}{logo}{}
 \define@key{swisscvscan}{band}{}
 \define@key{swisscvscan}{variant}{%
@@ -1531,6 +1537,7 @@
   \def\swiss@cv@docid{\swiss@meta{docid}}%
   \def\swiss@cv@date{\swiss@meta{date}}%
   \def\swiss@cg@glyph{}\def\swiss@cg@line{30}\def\swiss@cg@lines{34}%
+  \def\swiss@cg@ink{accent}%
   \def\swiss@cv@logo{\swiss@logo@cover}%
   \def\swiss@cb@start{38}\def\swiss@cb@lines{9}}
 
@@ -1574,7 +1581,7 @@
     \ifx\swiss@cg@glyph\@empty\else
       \AtPageUpperLeft{\put(\LenToUnit{\innermargin},%
           \LenToUnit{\dimexpr-\swiss@topmargin-\swiss@cg@line\gridunit\relax}){%
-        \makebox[0pt][l]{\color{accent}%
+        \makebox[0pt][l]{\color{\swiss@cg@ink}%
           \fontsize{\dimexpr\swiss@cg@lines\gridunit\relax}%
                    {\dimexpr\swiss@cg@lines\gridunit\relax}%
           \selectfont\swiss@cg@glyph}}}%

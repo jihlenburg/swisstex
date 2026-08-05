@@ -2,9 +2,11 @@ import re
 from conftest import build_doc, swisscheck, ROOT
 
 def test_class_is_v2(tmp_path):
+    # Doktrin-Aussage ist die Major-Linie, nicht die Patchnummer -- ein
+    # Minor-Sprung (v2.1.0 fuer glyphink) darf diesen Test nicht reissen.
     r = build_doc(ROOT / "tests/fixtures/plain.tex", tmp_path)
     assert r.returncode == 0, r.log[-2000:]
-    assert "v2.0.0" in r.log
+    assert re.search(r"v2\.\d+\.\d+", r.log)
 
 def test_doctrine_lengths_in_log(tmp_path):
     # class \typeout's the derived lengths for machine checking. The
